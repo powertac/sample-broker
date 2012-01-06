@@ -24,6 +24,7 @@ import org.powertac.common.Competition;
 import org.powertac.common.interfaces.BrokerProxy;
 import org.powertac.common.interfaces.CompetitionControl;
 import org.powertac.common.interfaces.InitializationService;
+import org.powertac.common.repo.BrokerRepo;
 import org.powertac.common.repo.RandomSeedRepo;
 import org.powertac.common.repo.TimeslotRepo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +46,9 @@ public class SampleBrokerService
   
   @Autowired // timeslot repository
   private TimeslotRepo timeslotRepo;
+  
+  @Autowired // broker repo - needed to set up local brokers
+  private BrokerRepo brokerRepo;
 
   @Autowired // needed to discover sim mode
   private CompetitionControl competitionControlService;
@@ -74,6 +78,7 @@ public class SampleBrokerService
   {
     SampleBroker result = new SampleBroker(username, this); 
     brokers.add(result);
+    brokerRepo.add(result);
     return result;
   }
   
@@ -82,14 +87,16 @@ public class SampleBrokerService
   @Override
   public void setDefaults ()
   {
-    
+    SampleBroker broker = (SampleBroker)createBroker("Sample");
+    log.debug("initializing sample broker");
+    broker.init();
   }
 
   @Override
   public String initialize (Competition competition, List<String> completedInits)
   {
     // TODO Auto-generated method stub
-    return null;
+    return "sample-broker";
   }
 
   public CompetitionControl getCompetitionControlService ()

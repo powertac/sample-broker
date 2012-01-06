@@ -35,6 +35,7 @@ import org.powertac.common.msg.SimResume;
 import org.powertac.common.msg.SimStart;
 import org.powertac.common.repo.CustomerRepo;
 import org.powertac.common.repo.TimeslotRepo;
+import org.powertac.common.spring.SpringApplicationContext;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -46,20 +47,20 @@ public class SampleBroker extends Broker
   static private Logger log = Logger.getLogger(SampleBroker.class);
 
   // Services that need to be replicated in a remote broker
-  @Autowired
+  //@Autowired
   private BrokerProxy brokerProxyService;
   
-  @Autowired
+  //@Autowired
   private TimeslotRepo timeslotRepo;
 
   // Broker components
   private MessageDispatcher router;
   
-  @Autowired
+  //@Autowired
   private PortfolioManagerService portfolioManagerService;
   
-  @Autowired
-  private MarketManager marketManagerService;
+  //@Autowired
+  private MarketManagerService marketManagerService;
 
   /** parameters */
   // keep in mind that brokers need to deal with two viewpoints. Tariff
@@ -68,7 +69,6 @@ public class SampleBroker extends Broker
   private int usageRecordLength = 7 * 24; // one week
   
   // local state
-  private boolean enabled = false; // enabled after authorization
   private RandomSeed randomSeed;
 
   // Broker keeps its own records
@@ -84,15 +84,30 @@ public class SampleBroker extends Broker
    */
   public SampleBroker (String username, SampleBrokerService service)
   {
-    super(username, true, false);
+    super(username);
+    setLocal(true);
     this.service = service;
   }
   
   /**
    * Called by initialization service once at the beginning of each game.
    */
+  @SuppressWarnings("unchecked")
   void init ()
-  {    
+  {
+    log.info("initialize: local=" + isLocal());
+
+    // fill in service references
+    brokerProxyService =
+        (BrokerProxy) SpringApplicationContext.getBean("brokerProxyService");
+    timeslotRepo =
+        (TimeslotRepo) SpringApplicationContext.getBean("timeslotRepo");
+    router = new MessageDispatcher(); // must be set up first
+    portfolioManagerService =
+        (PortfolioManagerService) SpringApplicationContext.getBean("portfolioManagerService");
+    marketManagerService =
+        (MarketManagerService) SpringApplicationContext.getBean("marketManagerService");
+
     // set up local state
     customerRepo = new CustomerRepo();
     brokerNames = new ArrayList<String>();
@@ -101,7 +116,6 @@ public class SampleBroker extends Broker
                                                   0, getUsername());
 
     // Set up components
-    router = new MessageDispatcher(); // must be set up first
     portfolioManagerService.init(this);
     marketManagerService.init(this);
     for (Class<?> clazz: Arrays.asList(BrokerAccept.class,
@@ -115,16 +129,6 @@ public class SampleBroker extends Broker
 
     // log in to ccs
     sendMessage(new BrokerAuthentication(this));
-
-    // Other setup parameters
-//    buyLimitPriceMin = config.getDoubleValue("buyLimitPriceMin",
-//                                             buyLimitPriceMin);
-//    buyLimitPriceMax = config.getDoubleValue("buyLimitPriceMax",
-//                                             buyLimitPriceMax);
-//    sellLimitPriceMin = config.getDoubleValue("sellLimitPriceMin",
-//                                              sellLimitPriceMin);
-//    sellLimitPriceMax = config.getDoubleValue("sellLimitPriceMax",
-//                                              sellLimitPriceMax);
   }
   
   // ------------- Accessors ----------------
@@ -172,15 +176,6 @@ public class SampleBroker extends Broker
   {
     router.registerMessageHandler(handler, messageType);
   }
-  
-  /**
-   * True just in case the broker is able to send and receive messages.
-   */
-  @Override
-  public boolean isEnabled()
-  {
-    return enabled;
-  }
 
   // ------------ process messages -------------
   /**
@@ -196,9 +191,10 @@ public class SampleBroker extends Broker
   @Override
   public void receiveMessage (Object msg)
   {
+    //log.info("receive " + msg.toString());
     if (msg != null) {
       // ignore all incoming messages until enabled.
-      if (!(enabled || msg instanceof BrokerAccept))
+      if (!(isEnabled() || msg instanceof BrokerAccept))
         return;
       router.routeMessage(msg);
     }
@@ -222,7 +218,7 @@ public class SampleBroker extends Broker
    */
   public void handleMessage (BrokerAccept accept)
   {
-    enabled = true;
+    setEnabled(true);
   }
   
   /**

@@ -26,6 +26,7 @@ import org.powertac.common.Competition;
 import org.powertac.common.MarketPosition;
 import org.powertac.common.MarketTransaction;
 import org.powertac.common.Order;
+import org.powertac.common.Orderbook;
 import org.powertac.common.Timeslot;
 import org.powertac.common.WeatherReport;
 import org.powertac.common.msg.MarketBootstrapData;
@@ -176,6 +177,14 @@ public class MarketManagerService implements MarketManager
       log.error("order corresponding to market tx " + tx + " is null");
     else if (tx.getMWh() == lastTry.getMWh()) // fully cleared
       lastOrder.put(tx.getTimeslot(), null);
+  }
+  
+  /**
+   * Receives the market orderbooks
+   */
+  public void handleMessage (Orderbook orderbook)
+  {
+    
   }
   
   /**

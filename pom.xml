@@ -26,4 +26,6 @@
     <relativePath />
   </parent>
   <description>server-resident sample broker implementation</description>
+  <groupId>org.powertac</groupId>
+  <version>0.2.0-SNAPSHOT</version>
 </project>
