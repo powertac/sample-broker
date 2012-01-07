@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 the original author or authors.
+ * Copyright 2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package org.powertac.samplebroker;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.log4j.Logger;
 import org.joda.time.Instant;
@@ -25,41 +26,50 @@ import org.powertac.common.Broker;
 import org.powertac.common.CashPosition;
 import org.powertac.common.Competition;
 import org.powertac.common.CustomerInfo;
-import org.powertac.common.RandomSeed;
+import org.powertac.common.TimeService;
 import org.powertac.common.Timeslot;
-import org.powertac.common.interfaces.BrokerProxy;
 import org.powertac.common.msg.BrokerAccept;
 import org.powertac.common.msg.BrokerAuthentication;
+import org.powertac.common.msg.SimEnd;
 import org.powertac.common.msg.SimPause;
 import org.powertac.common.msg.SimResume;
 import org.powertac.common.msg.SimStart;
+import org.powertac.common.msg.TimeslotUpdate;
 import org.powertac.common.repo.CustomerRepo;
 import org.powertac.common.repo.TimeslotRepo;
-import org.powertac.common.spring.SpringApplicationContext;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 /**
+ * This is the top-level controller for the broker. It sets up the other
+ * components, maintains the clock, and terminates when the SimEnd message
+ * is received.
  * 
  * @author John Collins
  */
-public class SampleBroker extends Broker
+@Service
+public class SampleBroker
 {
   static private Logger log = Logger.getLogger(SampleBroker.class);
 
   // Services that need to be replicated in a remote broker
   //@Autowired
-  private BrokerProxy brokerProxyService;
+  //private BrokerProxy brokerProxyService;
   
-  //@Autowired
+  @Autowired
+  private TimeService timeService;
+  
+  @Autowired
   private TimeslotRepo timeslotRepo;
 
   // Broker components
+  @Autowired
   private MessageDispatcher router;
   
-  //@Autowired
+  @Autowired
   private PortfolioManagerService portfolioManagerService;
   
-  //@Autowired
+  @Autowired
   private MarketManagerService marketManagerService;
 
   /** parameters */
@@ -69,66 +79,70 @@ public class SampleBroker extends Broker
   private int usageRecordLength = 7 * 24; // one week
   
   // local state
-  private RandomSeed randomSeed;
+  private Random randomSeed = new Random();
 
   // Broker keeps its own records
   private CustomerRepo customerRepo;
   private ArrayList<String> brokerNames;
   private Instant baseTime = null;
+  private BrokerAdapter adapter;
+  private boolean running = false; // true to run, false to stop
   
-  private SampleBrokerService service;
+  //private SampleBrokerService service;
 
   /**
-   * Constructor for local broker deployment takes a username and a 
-   * reference to the service
+   * Default constructor for remote broker deployment
    */
-  public SampleBroker (String username, SampleBrokerService service)
+  public SampleBroker ()
   {
-    super(username);
-    setLocal(true);
-    this.service = service;
+    super();
   }
   
   /**
-   * Called by initialization service once at the beginning of each game.
+   * Sets up the "adapter" broker, initializes the other services, registers
+   * for incoming messages.
    */
   @SuppressWarnings("unchecked")
-  void init ()
+  public void init (String username)
   {
-    log.info("initialize: local=" + isLocal());
-
-    // fill in service references
-    brokerProxyService =
-        (BrokerProxy) SpringApplicationContext.getBean("brokerProxyService");
-    timeslotRepo =
-        (TimeslotRepo) SpringApplicationContext.getBean("timeslotRepo");
-    router = new MessageDispatcher(); // must be set up first
-    portfolioManagerService =
-        (PortfolioManagerService) SpringApplicationContext.getBean("portfolioManagerService");
-    marketManagerService =
-        (MarketManagerService) SpringApplicationContext.getBean("marketManagerService");
-
-    // set up local state
-    customerRepo = new CustomerRepo();
-    brokerNames = new ArrayList<String>();
-    randomSeed =
-        service.getRandomSeedRepo().getRandomSeed(this.getClass().getName(),
-                                                  0, getUsername());
+    adapter = new BrokerAdapter(username);
 
     // Set up components
+    brokerNames = new ArrayList<String>();
     portfolioManagerService.init(this);
     marketManagerService.init(this);
     for (Class<?> clazz: Arrays.asList(BrokerAccept.class,
                                        CashPosition.class,
                                        Competition.class,
+                                       SimEnd.class,
                                        SimPause.class,
                                        SimResume.class,
-                                       SimStart.class)) {
+                                       SimStart.class,
+                                       TimeslotUpdate.class)) {
       router.registerMessageHandler(this, clazz);
     }
+  }
+  
+  /**
+   * Logs in and waits for the sim to end.
+   */
+  public void run ()
+  {
+    // log in to server
+    sendMessage(new BrokerAuthentication(adapter));
 
-    // log in to ccs
-    sendMessage(new BrokerAuthentication(this));
+    // wait for session to end
+    synchronized (this) {
+      running = true;
+      while (running) {
+        try {
+          wait();
+        }
+        catch (InterruptedException ie) {
+          log.warn("Interrupted!");
+        }
+      }
+    }
   }
   
   // ------------- Accessors ----------------
@@ -141,6 +155,22 @@ public class SampleBroker extends Broker
   }
   
   /**
+   * Returns the "real" broker underneath this monstrosity
+   */
+  public Broker getBroker ()
+  {
+    return adapter;
+  }
+  
+  /**
+   * Returns the username for this broker
+   */
+  public String getBrokerUsername ()
+  {
+    return adapter.getUsername();
+  }
+  
+  /**
    * Returns the customerRepo. Cannot be called until after initialization.
    */
   public CustomerRepo getCustomerRepo ()
@@ -148,7 +178,7 @@ public class SampleBroker extends Broker
     return customerRepo;
   }
   
-  public RandomSeed getRandomSeed ()
+  public Random getRandomSeed ()
   {
     return randomSeed;
   }
@@ -170,6 +200,14 @@ public class SampleBroker extends Broker
   }
   
   /**
+   * Returns the broker's list of competing brokers - non-public
+   */
+  List<String> getBrokerList ()
+  {
+    return brokerNames;
+  }
+  
+  /**
    * Delegates registrations to the router
    */
   public void registerMessageHandler (Object handler, Class<?> messageType)
@@ -188,17 +226,6 @@ public class SampleBroker extends Broker
    * <li>CashPosition tells us it's time to send in our bids/asks</li>
    * </ul>
    */
-  @Override
-  public void receiveMessage (Object msg)
-  {
-    //log.info("receive " + msg.toString());
-    if (msg != null) {
-      // ignore all incoming messages until enabled.
-      if (!(isEnabled() || msg instanceof BrokerAccept))
-        return;
-      router.routeMessage(msg);
-    }
-  }
 
   /**
    * Sends an outgoing message. May need to be reimplemented in a remote broker.
@@ -206,7 +233,8 @@ public class SampleBroker extends Broker
   public void sendMessage (Object message)
   {
     if (message != null) {
-      brokerProxyService.routeMessage(message);
+      //brokerProxyService.routeMessage(message);
+      router.sendMessage(message);
     }
   }
 
@@ -218,7 +246,7 @@ public class SampleBroker extends Broker
    */
   public void handleMessage (BrokerAccept accept)
   {
-    setEnabled(true);
+    adapter.setEnabled(true);
   }
   
   /**
@@ -238,15 +266,23 @@ public class SampleBroker extends Broker
    */
   public void handleMessage (Competition comp)
   {
+    // comp needs to be the "current competition"
+    Competition.setCurrent(comp);
+    
+    // record the customers and brokers
     for (CustomerInfo customer : comp.getCustomers()) {
       customerRepo.add(customer);
     }
     for (String brokerName : comp.getBrokers()) {
       brokerNames.add(brokerName);
     }
-    // in a remote broker, we would also need to pull out the clock
+    // in a remote broker, we pull out the clock
     // parameters to init the local clock, and create the initial timeslots.
     baseTime = comp.getSimulationBaseTime();
+    timeService.setClockParameters(comp.getSimulationBaseTime().getMillis(),
+                                   comp.getSimulationRate(), 
+                                   comp.getSimulationModulo());
+    timeService.init(); // set time to beginning of bootstrap period
   }
   
   /**
@@ -255,6 +291,7 @@ public class SampleBroker extends Broker
   public void handleMessage (SimPause sp)
   {
     // local brokers can ignore this.
+    log.info("Paused at " + timeService.getCurrentDateTime().toString());
   }
   
   /**
@@ -263,6 +300,9 @@ public class SampleBroker extends Broker
   public void handleMessage (SimResume sr)
   {
     // local brokers don't need to handle this
+    log.info("Resumed");
+    timeService.setStart(sr.getStart().getMillis());
+    timeService.updateTime();
   }
   
   /**
@@ -271,19 +311,51 @@ public class SampleBroker extends Broker
   public void handleMessage (SimStart ss)
   {
     // local brokers don't need to do anything with this.
+    log.info("SimStart - start time is " + ss.getStart().toString());
+    timeService.setStart(ss.getStart().getMillis());
+    timeService.updateTime();
+    // create initial timeslots
+    timeslotRepo.createInitialTimeslots();
+  }
+  
+  /**
+   * Receives the SimEnd message, which ends the broker session.
+   */
+  public synchronized void handleMessage (SimEnd se)
+  {
+    // local brokers can ignore this
+    log.info("SimEnd received");
+    running = false;
+    notifyAll();
+  }
+  
+  /**
+   * Updates the sim clock on receipt of the TimeslotUpdate message,
+   * which should be the first to arrive in each timeslot. We have to disable
+   * all the timeslots prior to the first enabled slot, then create and enable
+   * all the enabled slots.
+   */
+  public void handleMessage (TimeslotUpdate tu)
+  {
+    Timeslot old = timeslotRepo.currentTimeslot();
+    timeService.updateTime(); // here is the clock update
+    log.info("TimeslotUpdate at " + timeService.getCurrentDateTime().toString());
+    List<Timeslot> enabled = tu.getEnabled();
+    for (int index = old.getSerialNumber();
+         index < enabled.get(0).getSerialNumber();
+         index ++) {
+      timeslotRepo.findBySerialNumber(index).disable();
+    }
+    for (Timeslot ts : tu.getEnabled()) {
+      Timeslot open =
+          timeslotRepo.findOrCreateBySerialNumber(ts.getSerialNumber());
+      open.enable();
+    }
   }
 
-  //double consumption = (config.getDoubleValue("consumptionRate",
-  //                                            defaultConsumptionRate));
-  //defaultConsumption = new TariffSpecification(face, PowerType.CONSUMPTION)
-  //.addRate(new Rate().withValue(consumption));
-  //double production = (config.getDoubleValue("productionRate",
-  //                                           defaultProductionRate));
-  //defaultProduction = new TariffSpecification(face, PowerType.PRODUCTION)
-  //   .addRate(new Rate().withValue(production));
   /**
-   * In each timeslot, we must trade in the wholesale market to satisfy the
-   * predicted load of our current customer base.
+   * In each timeslot, we must update our portfolio and trade in the 
+   * wholesale market.
    */
   public void activate ()
   {
@@ -293,14 +365,31 @@ public class SampleBroker extends Broker
     marketManagerService.activate();
   }
   
-  // ----------------- test support ------------------
-  List<String> getBrokerList ()
+  /**
+   * Broker implementation needed to override the receiveMessage method.
+   */
+  class BrokerAdapter extends Broker
   {
-    return brokerNames;
-  }
-  
-  List<CustomerInfo> getCustomerList ()
-  {
-    return new ArrayList<CustomerInfo>(customerRepo.list());
+
+    public BrokerAdapter (String username)
+    {
+      super(username);
+    }
+
+    /**
+     * Here is where incoming messages actually arrive.
+     */
+    @Override
+    public void receiveMessage (Object msg)
+    {
+      //log.info("receive " + msg.toString());
+      if (msg != null) {
+        // ignore all incoming messages until enabled.
+        if (!(isEnabled() || msg instanceof BrokerAccept))
+          return;
+        router.routeMessage(msg);
+      }
+    }
+    
   }
 }

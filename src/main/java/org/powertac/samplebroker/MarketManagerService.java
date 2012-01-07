@@ -36,7 +36,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * Handles market interactions on behalf of the broker.
+ * Handles market interactions on behalf of the master.
  * @author John Collins
  */
 @Service
@@ -44,7 +44,7 @@ public class MarketManagerService implements MarketManager
 {
   static private Logger log = Logger.getLogger(MarketManagerService.class);
   
-  private SampleBroker broker; // master
+  private SampleBroker master; // master
   
   @Autowired
   private TimeslotRepo timeslotRepo;
@@ -82,7 +82,7 @@ public class MarketManagerService implements MarketManager
   @Override
   public void init (SampleBroker broker)
   {
-    this.broker = broker;
+    this.master = broker;
     lastOrder = new HashMap<Timeslot, Order>();
     enabledTimeslots = new ArrayList<Timeslot>();
     marketTxMap = new HashMap<Timeslot, ArrayList<MarketTransaction>>();
@@ -131,22 +131,22 @@ public class MarketManagerService implements MarketManager
    */
   public void handleMessage (MarketBootstrapData data)
   {
-    marketMWh = new double[broker.getUsageRecordLength()];
-    marketPrice = new double[broker.getUsageRecordLength()];
+    marketMWh = new double[master.getUsageRecordLength()];
+    marketPrice = new double[master.getUsageRecordLength()];
     double totalUsage = 0.0;
     double totalValue = 0.0;
     for (int i = 0; i < data.getMwh().length; i++) {
       totalUsage += data.getMwh()[i];
       totalValue += data.getMarketPrice()[i] * data.getMwh()[i];
-      if (i < broker.getUsageRecordLength()) {
+      if (i < master.getUsageRecordLength()) {
         // first pass, just copy the data
         marketMWh[i] = data.getMwh()[i];
         marketPrice[i] = data.getMarketPrice()[i];
       }
       else {
         // subsequent passes, accumulate mean values
-        int pass = i / broker.getUsageRecordLength();
-        int index = i % broker.getUsageRecordLength();
+        int pass = i / master.getUsageRecordLength();
+        int index = i % master.getUsageRecordLength();
         marketMWh[index] =
             (marketMWh[index] * pass + data.getMwh()[i]) / (pass + 1);
         marketPrice[index] =
@@ -162,7 +162,7 @@ public class MarketManagerService implements MarketManager
    */
   public void handleMessage (MarketPosition posn)
   {
-    broker.addMarketPosition(posn, posn.getTimeslot());
+    master.getBroker().addMarketPosition(posn, posn.getTimeslot());
   }
   
   /**
@@ -214,7 +214,7 @@ public class MarketManagerService implements MarketManager
   {
     double neededKWh = 0.0;
     for (Timeslot timeslot : timeslotRepo.enabledTimeslots()) {
-      int index = (timeslot.getSerialNumber()) % broker.getUsageRecordLength();
+      int index = (timeslot.getSerialNumber()) % master.getUsageRecordLength();
       neededKWh = portfolioManager.collectUsage(index);
       submitOrder(neededKWh, timeslot);
     }
@@ -225,7 +225,8 @@ public class MarketManagerService implements MarketManager
     double neededMWh = neededKWh / 1000.0;
     
     Double limitPrice;
-    MarketPosition posn = broker.findMarketPositionByTimeslot(timeslot);
+    MarketPosition posn =
+        master.getBroker().findMarketPositionByTimeslot(timeslot);
     if (posn != null)
       neededMWh -= posn.getOverallBalance();
     log.debug("needed mWh=" + neededMWh);
@@ -238,9 +239,9 @@ public class MarketManagerService implements MarketManager
     }
     log.info("new order for " + neededMWh + " at " + limitPrice +
              " in timeslot " + timeslot.getSerialNumber());
-    Order result = new Order(broker, timeslot, neededMWh, limitPrice);
+    Order result = new Order(master.getBroker(), timeslot, neededMWh, limitPrice);
     lastOrder.put(timeslot, result);
-    broker.sendMessage(result);
+    master.sendMessage(result);
   }
 
   /**
@@ -278,7 +279,7 @@ public class MarketManagerService implements MarketManager
     if (remainingTries > 0) {
       double range = (minPrice - oldLimitPrice) * 2.0 / (double)remainingTries;
       log.debug("oldLimitPrice=" + oldLimitPrice + ", range=" + range);
-      double computedPrice = oldLimitPrice + broker.getRandomSeed().nextDouble() * range; 
+      double computedPrice = oldLimitPrice + master.getRandomSeed().nextDouble() * range; 
       return Math.max(newLimitPrice, computedPrice);
     }
     else

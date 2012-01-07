@@ -207,7 +207,7 @@ public class PortfolioManagerService implements PortfolioManager
   public void handleMessage(TariffSpecification spec)
   {
     Broker theBroker = spec.getBroker();
-    if (broker == theBroker) {
+    if (broker.getBrokerUsername() == theBroker.getUsername()) {
       // if it's ours, just log it
       log.info("published " + spec);
     }
@@ -285,7 +285,7 @@ public class PortfolioManagerService implements PortfolioManager
       else
         rateValue = (marketPrice / (1.0 + defaultMargin));
       TariffSpecification spec =
-          new TariffSpecification(broker, pt)
+          new TariffSpecification(broker.getBroker(), pt)
         .withPeriodicPayment(defaultPeriodicPayment)
         .addRate(new Rate().withValue(rateValue));
       customerSubscriptions.put(spec, new HashMap<CustomerInfo, CustomerRecord>());
