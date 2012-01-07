@@ -23,11 +23,13 @@ import org.apache.log4j.Logger;
 import org.powertac.common.BalancingTransaction;
 import org.powertac.common.ClearedTrade;
 import org.powertac.common.Competition;
+import org.powertac.common.DistributionTransaction;
 import org.powertac.common.MarketPosition;
 import org.powertac.common.MarketTransaction;
 import org.powertac.common.Order;
 import org.powertac.common.Orderbook;
 import org.powertac.common.Timeslot;
+import org.powertac.common.WeatherForecast;
 import org.powertac.common.WeatherReport;
 import org.powertac.common.msg.MarketBootstrapData;
 import org.powertac.common.msg.TimeslotUpdate;
@@ -89,10 +91,13 @@ public class MarketManagerService implements MarketManager
     weather = new ArrayList<WeatherReport>();
     for (Class<?> messageType: Arrays.asList(BalancingTransaction.class,
                                              ClearedTrade.class,
+                                             DistributionTransaction.class,
                                              MarketBootstrapData.class,
                                              MarketPosition.class,
                                              MarketTransaction.class,
+                                             Orderbook.class,
                                              TimeslotUpdate.class,
+                                             WeatherForecast.class,
                                              WeatherReport.class)) {
       broker.registerMessageHandler(this, messageType);
     }
@@ -113,7 +118,8 @@ public class MarketManagerService implements MarketManager
    * Handles a BalancingTransaction message.
    */
   public void handleMessage (BalancingTransaction tx)
-  {  
+  {
+    log.info("Balancing tx: " + tx.getCharge());
   }
 
   /**
@@ -122,6 +128,14 @@ public class MarketManagerService implements MarketManager
    */
   public void handleMessage (ClearedTrade ct)
   {
+  }
+  
+  /**
+   * Handles a DistributionTransaction - charges for transporting power
+   */
+  public void handleMessage (DistributionTransaction dt)
+  {
+    log.info("Distribution tx: " + dt.getCharge());
   }
 
   /**
@@ -184,7 +198,7 @@ public class MarketManagerService implements MarketManager
    */
   public void handleMessage (Orderbook orderbook)
   {
-    
+    // implement something here.
   }
   
   /**
@@ -193,6 +207,13 @@ public class MarketManagerService implements MarketManager
   public void handleMessage (TimeslotUpdate update)
   {
     enabledTimeslots = new ArrayList<Timeslot>(update.getEnabled());
+  }
+  
+  /**
+   * Receives a new WeatherForecast.
+   */
+  public void handleMessage (WeatherForecast forecast)
+  {
   }
 
   /**

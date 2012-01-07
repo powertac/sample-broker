@@ -35,9 +35,6 @@ import org.powertac.common.msg.SimResume;
 import org.powertac.common.msg.SimStart;
 import org.powertac.common.repo.CustomerRepo;
 import org.powertac.common.repo.TimeslotRepo;
-import org.powertac.common.spring.SpringApplicationContext;
-import org.springframework.beans.factory.annotation.Autowired;
-
 /**
  * 
  * @author John Collins
@@ -98,15 +95,11 @@ public class SampleBroker extends Broker
     log.info("initialize: local=" + isLocal());
 
     // fill in service references
-    brokerProxyService =
-        (BrokerProxy) SpringApplicationContext.getBean("brokerProxyService");
-    timeslotRepo =
-        (TimeslotRepo) SpringApplicationContext.getBean("timeslotRepo");
-    router = new MessageDispatcher(); // must be set up first
-    portfolioManagerService =
-        (PortfolioManagerService) SpringApplicationContext.getBean("portfolioManagerService");
-    marketManagerService =
-        (MarketManagerService) SpringApplicationContext.getBean("marketManagerService");
+    brokerProxyService = service.getBrokerProxyService();
+    timeslotRepo = service.getTimeslotRepo();
+    router = service.getMessageDispatcher(); // must be set up first
+    portfolioManagerService = service.getPortfolioManagerService();
+    marketManagerService = service.getMarketManagerService();
 
     // set up local state
     customerRepo = new CustomerRepo();

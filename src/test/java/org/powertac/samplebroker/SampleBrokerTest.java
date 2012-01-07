@@ -18,28 +18,18 @@ package org.powertac.samplebroker;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-import java.util.Arrays;
-import java.util.HashMap;
-
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Instant;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.powertac.common.Broker;
 import org.powertac.common.Competition;
 import org.powertac.common.CustomerInfo;
-import org.powertac.common.PluginConfig;
 import org.powertac.common.RandomSeed;
-import org.powertac.common.TimeService;
-import org.powertac.common.Timeslot;
-import org.powertac.common.enumerations.PowerType;
 import org.powertac.common.interfaces.BrokerProxy;
-import org.powertac.common.interfaces.CompetitionControl;
 import org.powertac.common.msg.BrokerAccept;
 import org.powertac.common.msg.BrokerAuthentication;
-import org.powertac.common.msg.CustomerBootstrapData;
 import org.powertac.common.repo.RandomSeedRepo;
 import org.powertac.common.repo.TimeslotRepo;
 
@@ -68,9 +58,17 @@ public class SampleBrokerTest
     timeslotRepo = mock(TimeslotRepo.class);
     randomSeedRepo = mock(RandomSeedRepo.class);
     randomSeed = mock(RandomSeed.class);
+    MessageDispatcher messageDispatcher = new MessageDispatcher();
+    PortfolioManagerService portfolioManagerService =
+        mock(PortfolioManagerService.class);
+    MarketManagerService marketManagerService =
+        mock(MarketManagerService.class);
     when (service.getBrokerProxyService()).thenReturn(proxy);
     when (service.getTimeslotRepo()).thenReturn(timeslotRepo);
     when (service.getRandomSeedRepo()).thenReturn(randomSeedRepo);
+    when (service.getMessageDispatcher()).thenReturn(messageDispatcher);
+    when (service.getPortfolioManagerService()).thenReturn(portfolioManagerService);
+    when (service.getMarketManagerService()).thenReturn(marketManagerService);
     when (randomSeedRepo.getRandomSeed(anyString(), anyLong(), anyString())).thenReturn(randomSeed);
 
     // set the time

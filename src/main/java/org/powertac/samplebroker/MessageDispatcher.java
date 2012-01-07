@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
+import org.springframework.stereotype.Service;
 
 /**
  * Routes incoming messages to broker components. 
@@ -31,6 +32,7 @@ import org.apache.log4j.Logger;
  * takes the specified type as its single argument.
  * @author John Collins
  */
+@Service
 public class MessageDispatcher
 {
   static private Logger log = Logger.getLogger(SampleBroker.class);

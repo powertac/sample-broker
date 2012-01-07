@@ -55,6 +55,15 @@ public class SampleBrokerService
 
   @Autowired
   private RandomSeedRepo randomSeedRepo;
+  
+  @Autowired
+  private MessageDispatcher messageDispatcher;
+  
+  @Autowired
+  private MarketManagerService marketManagerService;
+  
+  @Autowired
+  private PortfolioManagerService portfolioManagerService;
 
   private ArrayList<SampleBroker> brokers = new ArrayList<SampleBroker>();
 
@@ -117,5 +126,20 @@ public class SampleBrokerService
   public BrokerProxy getBrokerProxyService ()
   {
     return brokerProxyService;
+  }
+
+  public MessageDispatcher getMessageDispatcher ()
+  {
+    return messageDispatcher;
+  }
+
+  public PortfolioManagerService getPortfolioManagerService ()
+  {
+    return portfolioManagerService;
+  }
+
+  public MarketManagerService getMarketManagerService ()
+  {
+    return marketManagerService;
   }
 }
