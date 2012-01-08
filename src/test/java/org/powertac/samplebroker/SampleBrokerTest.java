@@ -16,6 +16,7 @@
 package org.powertac.samplebroker;
 
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -24,7 +25,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.powertac.common.Competition;
 import org.powertac.common.CustomerInfo;
+import org.powertac.common.IdGenerator;
 import org.powertac.common.msg.BrokerAccept;
+import org.powertac.common.repo.CustomerRepo;
+import org.springframework.test.util.ReflectionTestUtils;
 
 /**
  * Test cases for the sample broker implementation.
@@ -36,6 +40,8 @@ public class SampleBrokerTest
   private Instant baseTime;
 
   private SampleBroker broker;
+  private MarketManagerService marketManagerService;
+  private PortfolioManagerService portfolioManagerService;
   
   @Before
   public void setUp () throws Exception
@@ -45,22 +51,34 @@ public class SampleBrokerTest
 
     // initialize the broker under test
     broker = new SampleBroker();
+    
+    // set up the autowired dependencies
+    marketManagerService = mock(MarketManagerService.class);
+    ReflectionTestUtils.setField(broker, "marketManagerService", marketManagerService);
+    portfolioManagerService = mock(PortfolioManagerService.class);
+    ReflectionTestUtils.setField(broker, "portfolioManagerService", portfolioManagerService);
+    MessageDispatcher messageDispatcher = new MessageDispatcher();
+    ReflectionTestUtils.setField(broker, "router", messageDispatcher);
+    CustomerRepo customerRepo = new CustomerRepo();
+    ReflectionTestUtils.setField(broker, "customerRepo", customerRepo);
+
     broker.init("Sample");
   }
   
-//  /**
-//   * Test method for {@link org.powertac.samplebroker.SampleBroker#SampleBroker(java.lang.String, org.powertac.samplebroker.SampleBrokerService)}.
-//   */
-//  @Test
-//  public void testSampleBroker ()
-//  {
-//    ArgumentCaptor<BrokerAuthentication> login = 
-//        ArgumentCaptor.forClass(BrokerAuthentication.class);
-//    verify(proxy).routeMessage(login.capture());
-//    assertEquals("correct broker", "Sample", login.getValue().getBroker().getUsername());
-//    verify(randomSeedRepo).getRandomSeed(SampleBroker.class.getName(), 0l, "Sample");
-//    assertFalse(broker.isEnabled());
-//  }
+  /**
+   * Test method for {@link org.powertac.samplebroker.SampleBroker#SampleBroker(java.lang.String, org.powertac.samplebroker.SampleBrokerService)}.
+   */
+  @Test
+  public void testSampleBroker ()
+  {
+    //ArgumentCaptor<BrokerAuthentication> login = 
+    //    ArgumentCaptor.forClass(BrokerAuthentication.class);
+    //verify(messageDispatcher).sendMessage(login.capture());
+    verify(marketManagerService).init(broker);
+    verify(portfolioManagerService).init(broker);
+    //verify(messageDispatcher, times(8)).registerMessageHandler(same(broker), isA(Class.class));
+    assertFalse(broker.getBroker().isEnabled());
+  }
 
   /**
    * Test method for {@link org.powertac.samplebroker.SampleBroker#isEnabled()}.
@@ -71,6 +89,7 @@ public class SampleBrokerTest
     assertFalse(broker.getBroker().isEnabled());
     broker.getBroker().receiveMessage(new BrokerAccept(3));
     assertTrue(broker.getBroker().isEnabled());
+    assertEquals("correct prefix", 3, IdGenerator.getPrefix());
   }
 
   /**

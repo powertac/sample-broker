@@ -26,6 +26,7 @@ import org.powertac.common.Broker;
 import org.powertac.common.CashPosition;
 import org.powertac.common.Competition;
 import org.powertac.common.CustomerInfo;
+import org.powertac.common.IdGenerator;
 import org.powertac.common.TimeService;
 import org.powertac.common.Timeslot;
 import org.powertac.common.msg.BrokerAccept;
@@ -72,6 +73,9 @@ public class SampleBroker
   @Autowired
   private MarketManagerService marketManagerService;
 
+  @Autowired
+  private CustomerRepo customerRepo;
+
   /** parameters */
   // keep in mind that brokers need to deal with two viewpoints. Tariff
   // types take the viewpoint of the customer, while market-related types
@@ -82,7 +86,6 @@ public class SampleBroker
   private Random randomSeed = new Random();
 
   // Broker keeps its own records
-  private CustomerRepo customerRepo;
   private ArrayList<String> brokerNames;
   private Instant baseTime = null;
   private BrokerAdapter adapter;
@@ -129,7 +132,7 @@ public class SampleBroker
   public void run ()
   {
     // log in to server
-    sendMessage(new BrokerAuthentication(adapter));
+    sendMessage(new BrokerAuthentication(adapter.getUsername(), "blank"));
 
     // wait for session to end
     synchronized (this) {
@@ -242,11 +245,13 @@ public class SampleBroker
   /**
    * BrokerAccept comes out when our authentication credentials are accepted
    * and we become part of the game. Before this, we cannot send any messages
-   * other than BrokerAuthentication.
+   * other than BrokerAuthentication. Also, note that the ID prefix needs to be
+   * set before any server-visible entities are created (such as tariff specs).
    */
   public void handleMessage (BrokerAccept accept)
   {
     adapter.setEnabled(true);
+    IdGenerator.setPrefix(accept.getPrefix());
   }
   
   /**
