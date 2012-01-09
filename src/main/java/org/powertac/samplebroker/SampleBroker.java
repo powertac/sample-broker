@@ -18,7 +18,6 @@ package org.powertac.samplebroker;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 
 import org.apache.log4j.Logger;
 import org.joda.time.Instant;
@@ -81,9 +80,6 @@ public class SampleBroker
   // types take the viewpoint of the customer, while market-related types
   // take the viewpoint of the broker.
   private int usageRecordLength = 7 * 24; // one week
-  
-  // local state
-  private Random randomSeed = new Random();
 
   // Broker keeps its own records
   private ArrayList<String> brokerNames;
@@ -179,11 +175,6 @@ public class SampleBroker
   public CustomerRepo getCustomerRepo ()
   {
     return customerRepo;
-  }
-  
-  public Random getRandomSeed ()
-  {
-    return randomSeed;
   }
 
   /**
@@ -283,13 +274,31 @@ public class SampleBroker
     }
     // in a remote broker, we pull out the clock
     // parameters to init the local clock, and create the initial timeslots.
-    baseTime = comp.getSimulationBaseTime();
-    timeService.setClockParameters(comp.getSimulationBaseTime().getMillis(),
+    Instant bootBaseTime = comp.getSimulationBaseTime();
+    int bootTimeslotCount =
+        (int)(comp.getBootstrapTimeslotCount() + 
+              comp.getBootstrapDiscardedTimeslots());
+    baseTime = bootBaseTime.plus(bootTimeslotCount * comp.getTimeslotDuration());
+    log.info("Boot base time: " + bootBaseTime.toString() + 
+             ", Sim base time: " + baseTime.toString());
+    timeService.setClockParameters(baseTime.getMillis(),
                                    comp.getSimulationRate(), 
                                    comp.getSimulationModulo());
     timeService.init(); // set time to beginning of bootstrap period
+    for (int sn = 0; sn <= bootTimeslotCount; sn++) {
+      Timeslot slot =
+          timeslotRepo.makeTimeslot(bootBaseTime.plus(sn * comp.getTimeslotDuration()));
+      slot.disable();
+    }
+    // now set time to end of bootstrap period.
+    Timeslot ts = timeslotRepo.findBySerialNumber((int)bootTimeslotCount);
+    if (! baseTime.equals(ts.getStartInstant()))
+      log.error("base=" + baseTime.toString() +
+                ", ts(" + ts.getSerialNumber() + ").start=" + ts.getStartInstant().toString());
+    timeService.setCurrentTime(baseTime);
+    log.info("Sim start time: " + timeService.getCurrentDateTime().toString());
   }
-  
+
   /**
    * Receives the SimPause message, used to pause the clock.
    */
@@ -319,8 +328,7 @@ public class SampleBroker
     log.info("SimStart - start time is " + ss.getStart().toString());
     timeService.setStart(ss.getStart().getMillis());
     timeService.updateTime();
-    // create initial timeslots
-    timeslotRepo.createInitialTimeslots();
+    log.info("SimStart - clock set to " + timeService.getCurrentDateTime().toString());
   }
   
   /**
@@ -349,7 +357,9 @@ public class SampleBroker
     for (int index = old.getSerialNumber();
          index < enabled.get(0).getSerialNumber();
          index ++) {
-      timeslotRepo.findBySerialNumber(index).disable();
+      Timeslot closed = 
+          timeslotRepo.findOrCreateBySerialNumber(index);
+      closed.disable();
     }
     for (Timeslot ts : tu.getEnabled()) {
       Timeslot open =
@@ -365,7 +375,8 @@ public class SampleBroker
   public void activate ()
   {
     Timeslot current = timeslotRepo.currentTimeslot();
-    log.info("activate: timeslot " + current.getSerialNumber());
+    log.info("activate at " + timeService.getCurrentDateTime().toString()
+             + ", timeslot " + current.getSerialNumber());
     portfolioManagerService.activate();
     marketManagerService.activate();
   }

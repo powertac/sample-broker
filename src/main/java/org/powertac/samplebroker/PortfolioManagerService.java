@@ -30,7 +30,9 @@ import org.powertac.common.TariffSpecification;
 import org.powertac.common.TariffTransaction;
 import org.powertac.common.enumerations.PowerType;
 import org.powertac.common.msg.CustomerBootstrapData;
+import org.powertac.common.msg.TariffStatus;
 import org.powertac.common.repo.CustomerRepo;
+import org.powertac.common.repo.TariffRepo;
 import org.powertac.common.repo.TimeslotRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -49,6 +51,9 @@ public class PortfolioManagerService implements PortfolioManager
   
   @Autowired
   private TimeslotRepo timeslotRepo;
+  
+  @Autowired
+  private TariffRepo tariffRepo;
   
   @Autowired
   private MarketManager marketManager;
@@ -79,6 +84,7 @@ public class PortfolioManagerService implements PortfolioManager
   /**
    * Sets up message handling
    */
+  @SuppressWarnings("unchecked")
   public void init (SampleBroker broker)
   {
     this.broker = broker;
@@ -89,6 +95,7 @@ public class PortfolioManagerService implements PortfolioManager
     competingTariffs = new HashMap<PowerType, List<TariffSpecification>>();
     for (Class<?> messageType: Arrays.asList(CustomerBootstrapData.class,
                                              TariffSpecification.class,
+                                             TariffStatus.class,
                                              TariffTransaction.class)) {
       broker.registerMessageHandler(this, messageType);
     }
@@ -169,6 +176,7 @@ public class PortfolioManagerService implements PortfolioManager
   /**
    * Returns total usage for a given timeslot (represented as a simple index).
    */
+  @Override
   public double collectUsage (int index)
   {
     double result = 0.0;
@@ -204,7 +212,7 @@ public class PortfolioManagerService implements PortfolioManager
    * Handles a TariffSpecification. These are sent out when new tariffs are
    * published. If it's not ours, then it's a competitor.
    */
-  public void handleMessage(TariffSpecification spec)
+  public void handleMessage (TariffSpecification spec)
   {
     Broker theBroker = spec.getBroker();
     if (broker.getBrokerUsername() == theBroker.getUsername()) {
@@ -215,6 +223,14 @@ public class PortfolioManagerService implements PortfolioManager
       // otherwise, keep track
       addCompetingTariff(spec);
     }
+  }
+  
+  /**
+   * Handles a TariffStatus message.
+   */
+  public void handleMessage (TariffStatus ts)
+  {
+    log.info("TariffStatus: " + ts.getStatus());
   }
   
   /**
@@ -281,14 +297,15 @@ public class PortfolioManagerService implements PortfolioManager
       // we'll just do fixed-rate tariffs for now
       double rateValue;
       if (pt.isConsumption())
-        rateValue = (-1.0 * marketPrice * (1.0 + defaultMargin));
+        rateValue = (marketPrice * (1.0 + defaultMargin));
       else
-        rateValue = (marketPrice / (1.0 + defaultMargin));
+        rateValue = (-1.0 * marketPrice / (1.0 + defaultMargin));
       TariffSpecification spec =
           new TariffSpecification(broker.getBroker(), pt)
         .withPeriodicPayment(defaultPeriodicPayment)
         .addRate(new Rate().withValue(rateValue));
       customerSubscriptions.put(spec, new HashMap<CustomerInfo, CustomerRecord>());
+      tariffRepo.addSpecification(spec);
       broker.sendMessage(spec);
     }
   }

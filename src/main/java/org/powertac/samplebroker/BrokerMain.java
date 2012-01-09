@@ -16,7 +16,6 @@
 package org.powertac.samplebroker;
 
 //import org.apache.log4j.Logger;
-import org.apache.log4j.Logger;
 import org.springframework.context.support.AbstractApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
@@ -26,7 +25,7 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
  */
 public class BrokerMain
 {
-  static private Logger log = Logger.getLogger(BrokerMain.class);
+  //static private Logger log = Logger.getLogger(BrokerMain.class);
 
   /**
    * Sets up the broker. Single command-line arg is the username
@@ -45,13 +44,17 @@ public class BrokerMain
       username = args[0];
     }
     
-    // find the Broker and JmsManagementService beans
+    // find the Broker and JmsManagementService beans, hook up the jms queue
     SampleBroker broker =
         (SampleBroker)context.getBeansOfType(SampleBroker.class).values().toArray()[0];
     broker.init(username);
     JmsManagementService jmsm =
         (JmsManagementService)context.getBeansOfType(JmsManagementService.class).values().toArray()[0];
-    jmsm.initializeQueues(username);
+    BrokerMessageReceiver receiver =
+        (BrokerMessageReceiver)context.getBeansOfType(BrokerMessageReceiver.class).values().toArray()[0];
+    String brokerQueueName = broker.getBroker().toQueueName();
+    jmsm.initializeQueues(brokerQueueName);
+    jmsm.registerMessageListener(brokerQueueName, receiver);
     broker.run();
     
     // if we get here, it's time to exit

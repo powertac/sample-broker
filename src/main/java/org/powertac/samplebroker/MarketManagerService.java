@@ -18,11 +18,13 @@ package org.powertac.samplebroker;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Random;
 
 import org.apache.log4j.Logger;
 import org.powertac.common.BalancingTransaction;
 import org.powertac.common.ClearedTrade;
 import org.powertac.common.Competition;
+import org.powertac.common.DistributionTransaction;
 import org.powertac.common.MarketPosition;
 import org.powertac.common.MarketTransaction;
 import org.powertac.common.Order;
@@ -53,18 +55,17 @@ public class MarketManagerService implements MarketManager
   private PortfolioManager portfolioManager;
 
   // local state
-  private double initialConsumptionMargin= 1.1; // customer pays
-  private double initialProductionMargin = 0.95;  // broker pays
+  private Random randomGen = new Random();
   
   // max and min offer prices. Max means "sure to trade"
   private double buyLimitPriceMax = -1.0;  // broker pays
-  private double buyLimitPriceMin = -100.0;  // broker pays
-  private double sellLimitPriceMax = 100.0;    // other broker pays
-  private double sellLimitPriceMin = 0.2;    // other broker pays
+  private double buyLimitPriceMin = -70.0;  // broker pays
+  private double sellLimitPriceMax = 70.0;    // other broker pays
+  private double sellLimitPriceMin = 0.5;    // other broker pays
+  private double minMWh = 0.001; // don't worry about 1 KWh or less
 
   // Bid recording
   private HashMap<Timeslot, Order> lastOrder;
-  private ArrayList<Timeslot> enabledTimeslots = null;
   private HashMap<Timeslot, ArrayList<MarketTransaction>> marketTxMap;
   private double[] marketMWh;
   private double[] marketPrice;
@@ -84,15 +85,15 @@ public class MarketManagerService implements MarketManager
   {
     this.master = broker;
     lastOrder = new HashMap<Timeslot, Order>();
-    enabledTimeslots = new ArrayList<Timeslot>();
     marketTxMap = new HashMap<Timeslot, ArrayList<MarketTransaction>>();
     weather = new ArrayList<WeatherReport>();
     for (Class<?> messageType: Arrays.asList(BalancingTransaction.class,
                                              ClearedTrade.class,
+                                             DistributionTransaction.class,
                                              MarketBootstrapData.class,
                                              MarketPosition.class,
                                              MarketTransaction.class,
-                                             TimeslotUpdate.class,
+                                             Orderbook.class,
                                              WeatherReport.class)) {
       broker.registerMessageHandler(this, messageType);
     }
@@ -121,6 +122,13 @@ public class MarketManagerService implements MarketManager
    * track of market prices.
    */
   public void handleMessage (ClearedTrade ct)
+  {
+  }
+  
+  /**
+   * Handles a DistributionTransaction
+   */
+  public void handleMessage (DistributionTransaction dt)
   {
   }
 
@@ -186,14 +194,6 @@ public class MarketManagerService implements MarketManager
   {
     
   }
-  
-  /**
-   * Receives a TimeslotUpdate message. 
-   */
-  public void handleMessage (TimeslotUpdate update)
-  {
-    enabledTimeslots = new ArrayList<Timeslot>(update.getEnabled());
-  }
 
   /**
    * Receives a new WeatherReport.
@@ -213,6 +213,7 @@ public class MarketManagerService implements MarketManager
   public void activate ()
   {
     double neededKWh = 0.0;
+    log.debug("Current timeslot is " + timeslotRepo.currentTimeslot().getSerialNumber());
     for (Timeslot timeslot : timeslotRepo.enabledTimeslots()) {
       int index = (timeslot.getSerialNumber()) % master.getUsageRecordLength();
       neededKWh = portfolioManager.collectUsage(index);
@@ -224,24 +225,22 @@ public class MarketManagerService implements MarketManager
   {
     double neededMWh = neededKWh / 1000.0;
     
-    Double limitPrice;
     MarketPosition posn =
         master.getBroker().findMarketPositionByTimeslot(timeslot);
     if (posn != null)
       neededMWh -= posn.getOverallBalance();
-    log.debug("needed mWh=" + neededMWh);
-    if (neededMWh == 0.0) {
+    log.debug("needed mWh=" + neededMWh +
+              ", timeslot " + timeslot.getSerialNumber());
+    if (Math.abs(neededMWh) <= minMWh) {
       log.info("no power required in timeslot " + timeslot.getSerialNumber());
       return;
     }
-    else {
-      limitPrice = computeLimitPrice(timeslot, neededMWh);
-    }
+    Double limitPrice = computeLimitPrice(timeslot, neededMWh);
     log.info("new order for " + neededMWh + " at " + limitPrice +
              " in timeslot " + timeslot.getSerialNumber());
-    Order result = new Order(master.getBroker(), timeslot, neededMWh, limitPrice);
-    lastOrder.put(timeslot, result);
-    master.sendMessage(result);
+    Order order = new Order(master.getBroker(), timeslot, neededMWh, limitPrice);
+    lastOrder.put(timeslot, order);
+    master.sendMessage(order);
   }
 
   /**
@@ -250,6 +249,8 @@ public class MarketManagerService implements MarketManager
   private Double computeLimitPrice (Timeslot timeslot,
                                     double amountNeeded)
   {
+    log.debug("Compute limit for " + amountNeeded + 
+              ", timeslot " + timeslot.getSerialNumber());
     // start with default limits
     Double oldLimitPrice;
     double minPrice;
@@ -265,9 +266,14 @@ public class MarketManagerService implements MarketManager
     }
     // check for escalation
     Order lastTry = lastOrder.get(timeslot);
+    if (lastTry != null)
+      log.debug("lastTry: " + lastTry.getMWh() +
+                " at " + lastTry.getLimitPrice());
     if (lastTry != null
-        && Math.signum(amountNeeded) == Math.signum(lastTry.getMWh()))
+        && Math.signum(amountNeeded) == Math.signum(lastTry.getMWh())) {
       oldLimitPrice = lastTry.getLimitPrice();
+      log.debug("old limit price: " + oldLimitPrice);
+    }
 
     // set price between oldLimitPrice and maxPrice, according to number of
     // remaining chances we have to get what we need.
@@ -276,10 +282,11 @@ public class MarketManagerService implements MarketManager
     int remainingTries = (timeslot.getSerialNumber()
                           - current.getSerialNumber()
                           - Competition.currentCompetition().getDeactivateTimeslotsAhead());
+    log.debug("remainingTries: " + remainingTries);
     if (remainingTries > 0) {
       double range = (minPrice - oldLimitPrice) * 2.0 / (double)remainingTries;
       log.debug("oldLimitPrice=" + oldLimitPrice + ", range=" + range);
-      double computedPrice = oldLimitPrice + master.getRandomSeed().nextDouble() * range; 
+      double computedPrice = oldLimitPrice + randomGen.nextDouble() * range; 
       return Math.max(newLimitPrice, computedPrice);
     }
     else

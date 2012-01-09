@@ -66,6 +66,7 @@ public class JmsManagementService {
   
   public Queue createQueue(String queueName) {
     Queue queue = null;
+    log.info("Creating queue " + queueName);
     try {
       Connection connection = connectionFactory.createConnection();
       Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);

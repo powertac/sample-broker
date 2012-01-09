@@ -45,7 +45,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class MessageDispatcher
 {
-  static private Logger log = Logger.getLogger(SampleBroker.class);
+  static private Logger log = Logger.getLogger(MessageDispatcher.class);
 
   @Autowired
   private XMLMessageConverter converter;
@@ -87,7 +87,7 @@ public class MessageDispatcher
   public void routeMessage (Object message)
   {
     Class<?> clazz = message.getClass();
-    //log.info("Route " + clazz.getName());
+    log.info("Route " + clazz.getName());
     Set<Object> targets = registrations.get(clazz);
     if (targets == null) {
       log.warn("no targets for message of type " + clazz.getName());
