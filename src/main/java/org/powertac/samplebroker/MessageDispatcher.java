@@ -21,11 +21,21 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.jms.JMSException;
+import javax.jms.Message;
+import javax.jms.Session;
+import javax.jms.TextMessage;
+
 import org.apache.log4j.Logger;
+import org.powertac.common.XMLMessageConverter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jms.core.JmsTemplate;
+import org.springframework.jms.core.MessageCreator;
 import org.springframework.stereotype.Service;
 
 /**
- * Routes incoming messages to broker components. 
+ * Routes incoming messages to broker components, and outgoing messages
+ * to the server. 
  * Components must register for specific message types with the broker, 
  * which passes the registrations to this router. For this to work, 
  * registered components must implement a handleMessage(msg) method that
@@ -35,16 +45,32 @@ import org.springframework.stereotype.Service;
 @Service
 public class MessageDispatcher
 {
-  static private Logger log = Logger.getLogger(SampleBroker.class);
+  static private Logger log = Logger.getLogger(MessageDispatcher.class);
+
+  @Autowired
+  private XMLMessageConverter converter;
+
+  @Autowired
+  private JmsTemplate template;
+  
+  @Autowired
+  private JmsManagementService jmsManagementService; 
 
   private HashMap<Class<?>, Set<Object>> registrations;
-  
+
+  /**
+   * Default constructor
+   */
   public MessageDispatcher ()
   {
     super();
     registrations = new HashMap<Class<?>, Set<Object>>();
   }
-  
+
+  // ------------- incoming messages ----------------
+  /**
+   * Sets up handlers for incoming messages by message type.
+   */
   public void registerMessageHandler (Object handler, Class<?> messageType)
   {
     Set<Object> reg = registrations.get(messageType);
@@ -55,10 +81,13 @@ public class MessageDispatcher
     reg.add(handler);
   }
   
+  /**
+   * Routes incoming messages from the server
+   */
   public void routeMessage (Object message)
   {
     Class<?> clazz = message.getClass();
-    //log.info("Route " + clazz.getName());
+    log.info("Route " + clazz.getName());
     Set<Object> targets = registrations.get(clazz);
     if (targets == null) {
       log.warn("no targets for message of type " + clazz.getName());
@@ -68,7 +97,27 @@ public class MessageDispatcher
       dispatch(target, "handleMessage", message);
     }
   }
-  
+
+  // ------------------ Outgoing messages ------------------
+  /**
+   * Sends outgoing messages to the server
+   */
+  public void sendMessage(Object message)
+  {
+    final String text = converter.toXML(message);
+    log.info("sending text: \n" + text);
+
+    template.send(jmsManagementService.getServerQueueName(),
+                  new MessageCreator() {
+      @Override
+      public Message createMessage (Session session) throws JMSException
+      {
+        TextMessage message = session.createTextMessage(text);
+        return message;
+      }
+    });
+  }
+
   // test-support
   Set<Object> getRegistrations (Class<?> messageType)
   {
