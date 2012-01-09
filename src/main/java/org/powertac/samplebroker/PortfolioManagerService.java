@@ -69,7 +69,8 @@ public class PortfolioManagerService implements PortfolioManager
   private HashMap<PowerType, List<TariffSpecification>> competingTariffs;
 
   // parameters
-  private double defaultMargin = 0.15;
+  private double defaultMargin = 0.5;
+  private double fixedPerKwh = -0.06;
   private double defaultPeriodicPayment = -0.05;
   
   /**
@@ -290,14 +291,15 @@ public class PortfolioManagerService implements PortfolioManager
   // fixed-rate two-part tariffs that give the broker a fixed margin.
   private void createInitialTariffs ()
   {
-    double marketPrice = marketManager.getMeanMarketPrice();
+    // remember that market prices are per mwh, but tariffs are by kwh
+    double marketPrice = marketManager.getMeanMarketPrice() / 1000.0;
     // for each power type representing a customer population,
     // create a tariff that's better than what's available
     for (PowerType pt : customerProfiles.keySet()) {
       // we'll just do fixed-rate tariffs for now
       double rateValue;
       if (pt.isConsumption())
-        rateValue = (marketPrice * (1.0 + defaultMargin));
+        rateValue = ((marketPrice + fixedPerKwh) * (1.0 + defaultMargin));
       else
         rateValue = (-1.0 * marketPrice / (1.0 + defaultMargin));
       TariffSpecification spec =
