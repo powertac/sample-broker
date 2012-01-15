@@ -28,6 +28,7 @@ import org.powertac.common.CustomerInfo;
 import org.powertac.common.Rate;
 import org.powertac.common.TariffSpecification;
 import org.powertac.common.TariffTransaction;
+import org.powertac.common.TimeService;
 import org.powertac.common.enumerations.PowerType;
 import org.powertac.common.msg.CustomerBootstrapData;
 import org.powertac.common.msg.TariffStatus;
@@ -57,6 +58,9 @@ public class PortfolioManagerService implements PortfolioManager
   
   @Autowired
   private MarketManager marketManager;
+  
+  @Autowired
+  private TimeService timeService;
 
   // ---- Portfolio records -----
   // Customer records indexed by power type and by tariff. Note that the
@@ -71,7 +75,7 @@ public class PortfolioManagerService implements PortfolioManager
   // parameters
   private double defaultMargin = 0.5;
   private double fixedPerKwh = -0.06;
-  private double defaultPeriodicPayment = -0.05;
+  private double defaultPeriodicPayment = -1.0;
   
   /**
    * Default constructor registers for messages, must be called after 
@@ -443,7 +447,7 @@ public class PortfolioManagerService implements PortfolioManager
     // timeslots that have passed since the beginning of the simulation.
     int getIndex (Instant when)
     {
-      int result = (int)((when.getMillis() - broker.getBaseTime().getMillis()) /
+      int result = (int)((when.getMillis() - timeService.getBase()) /
                          (Competition.currentCompetition().getTimeslotDuration()));
       return result;
     }

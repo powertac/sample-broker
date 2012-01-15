@@ -278,24 +278,13 @@ public class SampleBroker
     int bootTimeslotCount =
         (int)(comp.getBootstrapTimeslotCount() + 
               comp.getBootstrapDiscardedTimeslots());
-    baseTime = bootBaseTime.plus(bootTimeslotCount * comp.getTimeslotDuration());
-    log.info("Boot base time: " + bootBaseTime.toString() + 
-             ", Sim base time: " + baseTime.toString());
-    timeService.setClockParameters(baseTime.getMillis(),
-                                   comp.getSimulationRate(), 
-                                   comp.getSimulationModulo());
-    timeService.init(); // set time to beginning of bootstrap period
     for (int sn = 0; sn <= bootTimeslotCount; sn++) {
       Timeslot slot =
           timeslotRepo.makeTimeslot(bootBaseTime.plus(sn * comp.getTimeslotDuration()));
       slot.disable();
     }
     // now set time to end of bootstrap period.
-    Timeslot ts = timeslotRepo.findBySerialNumber((int)bootTimeslotCount);
-    if (! baseTime.equals(ts.getStartInstant()))
-      log.error("base=" + baseTime.toString() +
-                ", ts(" + ts.getSerialNumber() + ").start=" + ts.getStartInstant().toString());
-    timeService.setCurrentTime(baseTime);
+    timeService.setClockParameters(comp.getClockParameters());
     log.info("Sim start time: " + timeService.getCurrentDateTime().toString());
   }
 
