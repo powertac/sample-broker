@@ -37,11 +37,15 @@ public class BrokerMain
     
     // Get username from command-line.
     String username = "Sample";
+    String jmsBrokerUrl = null;    
     if (args.length < 1) {
       System.out.println("Username not given - default is 'Sample'");
     }
     else {
       username = args[0];
+      if (args.length == 2) {
+        jmsBrokerUrl = args[1];
+      }
     }
     
     // find the Broker and JmsManagementService beans, hook up the jms queue
@@ -53,7 +57,8 @@ public class BrokerMain
     BrokerMessageReceiver receiver =
         (BrokerMessageReceiver)context.getBeansOfType(BrokerMessageReceiver.class).values().toArray()[0];
     String brokerQueueName = broker.getBroker().toQueueName();
-    jmsm.initializeQueues(brokerQueueName);
+    
+    jmsm.init(jmsBrokerUrl);
     jmsm.registerMessageListener(brokerQueueName, receiver);
     broker.run();
     
