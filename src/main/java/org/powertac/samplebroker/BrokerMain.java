@@ -38,6 +38,11 @@ public class BrokerMain
     // Get username from command-line.
     String username = "Sample";
     String jmsBrokerUrl = null;    
+    String tsUrl = null;
+    String authToken = null;
+    String gameToken = null;
+    
+    
     if (args.length < 1) {
       System.out.println("Username not given - default is 'Sample'");
     }
@@ -45,7 +50,17 @@ public class BrokerMain
       username = args[0];
       if (args.length == 2) {
         jmsBrokerUrl = args[1];
+      }else if(args.length == 3) {
+    	if(args[1].equalsIgnoreCase("-t")){
+    		tsUrl = args[2];
+    	}
       }
+      
+    }
+    
+    // If a tournament scheduler was specified try to connect
+    if(tsUrl!=null){
+    	
     }
     
     // find the Broker and JmsManagementService beans, hook up the jms queue
