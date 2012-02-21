@@ -12,6 +12,10 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
+import net.sf.json.JSONObject;
+import net.sf.json.JSONSerializer;
+
+import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.powertac.common.config.ConfigurableValue;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -104,7 +108,7 @@ public class BrokerTournamentService {
 	private void spin(int seconds) {
 		try {
 
-			Thread.sleep(4 * 1000);
+			Thread.sleep(seconds * 1000);
 		} catch (InterruptedException e) {
 			// unable to sleep
 			e.printStackTrace();
@@ -167,11 +171,21 @@ public class BrokerTournamentService {
 
 				// TODO parse login success
 				// TODO parse done success
+				
+				
 			} else { // response type was json parse accordingly
-				// TODO: Json Parsing
-			}
+				String jsonTxt = IOUtils.toString(input);
 
-			return true;
+				JSONObject json = (JSONObject) JSONSerializer.toJSON(jsonTxt);
+				int retry = json.getInt("retry");
+				System.out.println("Retry message received for : " + retry
+						+ " seconds");
+				spin(retry);
+				
+				return false;
+
+				// TODO: Good Json Parsing
+			}
 		} catch (Exception e) { // exception hit return false
 			maxTry--;
 			System.out.println("Retries left: " + maxTry);
@@ -181,7 +195,7 @@ public class BrokerTournamentService {
 			try {
 				Thread.sleep(2000);
 			} catch (InterruptedException e1) {
-				
+
 				e1.printStackTrace();
 				return false;
 			}
