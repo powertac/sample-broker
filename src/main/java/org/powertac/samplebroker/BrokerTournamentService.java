@@ -23,10 +23,10 @@ import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.XMLReaderFactory;
 
 @Service
-public class BrokerTournamentService{
+public class BrokerTournamentService {
 
 	static private Logger log = Logger.getLogger(BrokerMessageReceiver.class);
-	
+
 	@Autowired
 	private BrokerPropertiesService brokerPropertiesService;
 
@@ -42,8 +42,8 @@ public class BrokerTournamentService{
 
 	// If set to negative number infinite retries
 	private int maxTry = 1;
-	
-	public void init(){
+
+	public void init() {
 		brokerPropertiesService.configureMe(this);
 	}
 
@@ -51,18 +51,16 @@ public class BrokerTournamentService{
 		return username;
 	}
 
-	@ConfigurableValue(valueType = "String",
-	          description = "Set the username of broker for tournament")  
+	@ConfigurableValue(valueType = "String", description = "Set the username of broker for tournament")
 	public void setUsername(String username) {
 		this.username = username;
 	}
-	
+
 	public String getResponseType() {
 		return responseType;
 	}
 
-	@ConfigurableValue(valueType = "String",
-	          description = "Response type to receive from the TS xml or json")  
+	@ConfigurableValue(valueType = "String", description = "Response type to receive from the TS xml or json")
 	public void setResponseType(String responseType) {
 		this.responseType = responseType;
 	}
@@ -71,19 +69,16 @@ public class BrokerTournamentService{
 		return tourneyName;
 	}
 
-	@ConfigurableValue(valueType = "String",
-	          description = "Name of tournament to join")  
+	@ConfigurableValue(valueType = "String", description = "Name of tournament to join")
 	public void setTourneyName(String tourneyName) {
 		this.tourneyName = tourneyName;
 	}
 
-	
 	public int getMaxTry() {
 		return maxTry;
 	}
 
-	@ConfigurableValue(valueType = "Integer",
-	          description = "Maximum number of tries to connect to Tournament Scheduler")  
+	@ConfigurableValue(valueType = "Integer", description = "Maximum number of tries to connect to Tournament Scheduler")
 	public void setMaxTry(int maxTry) {
 		this.maxTry = maxTry;
 	}
@@ -92,8 +87,7 @@ public class BrokerTournamentService{
 		return authToken;
 	}
 
-	@ConfigurableValue(valueType = "String",
-	          description = "Broker unique authorization token to authenticate with Tournament Scheduler")  
+	@ConfigurableValue(valueType = "String", description = "Broker unique authorization token to authenticate with Tournament Scheduler")
 	public void setAuthToken(String authToken) {
 		this.authToken = authToken;
 	}
@@ -136,28 +130,32 @@ public class BrokerTournamentService{
 			InputStream input = conn.getInputStream();
 
 			if (this.responseType.compareTo("xml") == 0) {
-				
-				
-				DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
-	            DocumentBuilder docBuilder = docBuilderFactory.newDocumentBuilder();
-	            Document doc = docBuilder.parse(input);
-				
-	            doc.getDocumentElement().normalize ();
+
+				DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory
+						.newInstance();
+				DocumentBuilder docBuilder = docBuilderFactory
+						.newDocumentBuilder();
+				Document doc = docBuilder.parse(input);
+
+				doc.getDocumentElement().normalize();
 
 				// Three different message types
-	            Node retryNode = doc.getElementsByTagName("retry").item(0).getFirstChild();
-	            //Node loginNode = doc.getElementsByTagName("login").item(0).getFirstChild();
-	            //Node doneNode = doc.getElementsByTagName("done").item(0).getFirstChild();
-	            
+				Node retryNode = doc.getElementsByTagName("retry").item(0)
+						.getFirstChild();
+				// Node loginNode =
+				// doc.getElementsByTagName("login").item(0).getFirstChild();
+				// Node doneNode =
+				// doc.getElementsByTagName("done").item(0).getFirstChild();
+
 				String checkRetry = retryNode.getNodeValue();
-				//String checkLogin = loginNode.getNodeValue();
-				//String checkDone = doneNode.getNodeValue();
+				// String checkLogin = loginNode.getNodeValue();
+				// String checkDone = doneNode.getNodeValue();
 
 				if (checkRetry != null) {
 					log.info("Retry message received for : " + checkRetry
 							+ " seconds");
-					System.out.println("Retry message received for : " + checkRetry
-							+ " seconds");
+					System.out.println("Retry message received for : "
+							+ checkRetry + " seconds");
 					// Received retry message spin and try again
 					spin(Integer.parseInt(checkRetry));
 					return false;
@@ -179,6 +177,14 @@ public class BrokerTournamentService{
 			System.out.println("Retries left: " + maxTry);
 			log.fatal("Error making connection to Tournament Scheduler");
 			log.fatal(e.getMessage());
+			// Sleep and wait for network
+			try {
+				Thread.sleep(2000);
+			} catch (InterruptedException e1) {
+				
+				e1.printStackTrace();
+				return false;
+			}
 			return false;
 		}
 
@@ -190,20 +196,18 @@ public class BrokerTournamentService{
 			while (maxTry > 0) {
 				System.out.println("Connecting...");
 				if (loginMaybe(tsUrl)) {
-					log.info("Login Successful! Game token: "+ this.gameToken);
+					log.info("Login Successful! Game token: " + this.gameToken);
 					return this.jmsUrl;
-				}				
+				}
 			}
 			System.out.println("Max attempts reached...shutting down");
 			log.fatal("Max attempts to log in reached");
 			System.exit(0);
-		}else{
+		} else {
 			log.fatal("Incorrect Tournament Scheduler URL or Broker Auth Token");
 			System.exit(0);
 		}
 		return null;
 	}
-
-
 
 }
