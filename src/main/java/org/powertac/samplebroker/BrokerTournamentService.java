@@ -144,18 +144,13 @@ public class BrokerTournamentService {
 				doc.getDocumentElement().normalize();
 
 				// Three different message types
-				Node retryNode = doc.getElementsByTagName("retry").item(0)
-						.getFirstChild();
-				// Node loginNode =
-				// doc.getElementsByTagName("login").item(0).getFirstChild();
-				// Node doneNode =
-				// doc.getElementsByTagName("done").item(0).getFirstChild();
+				Node retryNode = doc.getElementsByTagName("retry").item(0);
+				Node loginNode = doc.getElementsByTagName("login").item(0);
+				Node doneNode = doc.getElementsByTagName("done").item(0);
 
-				String checkRetry = retryNode.getNodeValue();
-				// String checkLogin = loginNode.getNodeValue();
-				// String checkDone = doneNode.getNodeValue();
-
-				if (checkRetry != null) {
+				if (retryNode != null) {
+					String checkRetry = retryNode.getFirstChild()
+							.getNodeValue();
 					log.info("Retry message received for : " + checkRetry
 							+ " seconds");
 					System.out.println("Retry message received for : "
@@ -163,6 +158,18 @@ public class BrokerTournamentService {
 					// Received retry message spin and try again
 					spin(Integer.parseInt(checkRetry));
 					return false;
+
+				} else if (loginNode != null) {
+					String checkLogin = loginNode.getFirstChild()
+							.getNodeValue();
+					log.info("Login message received : ");
+
+					return true;
+
+				} else if (doneNode != null) {
+					String checkDone = doneNode.getFirstChild().getNodeValue();
+					return false;
+
 				} else {
 					log.fatal("Invalid message type recieved");
 					return false;
@@ -171,8 +178,7 @@ public class BrokerTournamentService {
 
 				// TODO parse login success
 				// TODO parse done success
-				
-				
+
 			} else { // response type was json parse accordingly
 				String jsonTxt = IOUtils.toString(input);
 
@@ -181,7 +187,7 @@ public class BrokerTournamentService {
 				System.out.println("Retry message received for : " + retry
 						+ " seconds");
 				spin(retry);
-				
+
 				return false;
 
 				// TODO: Good Json Parsing
