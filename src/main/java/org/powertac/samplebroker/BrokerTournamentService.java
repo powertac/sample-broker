@@ -162,7 +162,15 @@ public class BrokerTournamentService {
 				} else if (loginNode != null) {
 					String checkLogin = loginNode.getFirstChild()
 							.getNodeValue();
-					log.info("Login message received : ");
+					String checkJmsUrl = doc.getElementsByTagName("jmsUrl").item(0).getFirstChild().getNodeValue();
+					String checkToken = doc.getElementsByTagName("gameToken").item(0).getFirstChild().getNodeValue();
+					log.info("Login message received! ");
+					log.info("jmsUrl="+checkJmsUrl);
+					log.info("gameToken="+checkToken);
+					
+					System.out.printf("Login message receieved!\njmsUrl=%s\ngameToken=%s\n",checkJmsUrl,checkToken);
+					this.jmsUrl = checkJmsUrl;
+					this.gameToken = checkToken;
 
 					return true;
 
@@ -214,7 +222,7 @@ public class BrokerTournamentService {
 	public String login(String tsUrl) {
 		if (this.authToken != null && tsUrl != null) {
 			while (maxTry > 0) {
-				System.out.println("Connecting...");
+				System.out.println("Connecting to TS...");
 				if (loginMaybe(tsUrl)) {
 					log.info("Login Successful! Game token: " + this.gameToken);
 					return this.jmsUrl;
