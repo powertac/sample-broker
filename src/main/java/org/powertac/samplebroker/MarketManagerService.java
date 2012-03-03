@@ -80,6 +80,7 @@ public class MarketManagerService implements MarketManager
   /* (non-Javadoc)
    * @see org.powertac.samplebroker.MarketManager#init(org.powertac.samplebroker.SampleBroker)
    */
+  @SuppressWarnings("unchecked")
   @Override
   public void init (SampleBroker broker)
   {
