@@ -21,6 +21,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.joda.time.Instant;
+import org.powertac.common.BankTransaction;
 import org.powertac.common.Broker;
 import org.powertac.common.CashPosition;
 import org.powertac.common.Competition;
@@ -34,6 +35,7 @@ import org.powertac.common.msg.SimEnd;
 import org.powertac.common.msg.SimPause;
 import org.powertac.common.msg.SimResume;
 import org.powertac.common.msg.SimStart;
+import org.powertac.common.msg.TimeslotComplete;
 import org.powertac.common.msg.TimeslotUpdate;
 import org.powertac.common.repo.CustomerRepo;
 import org.powertac.common.repo.TimeslotRepo;
@@ -84,8 +86,11 @@ public class SampleBroker
   // Broker keeps its own records
   private ArrayList<String> brokerNames;
   private Instant baseTime = null;
-  private BrokerAdapter adapter;
+  private double cash = 0;
+  private int currentTimeslot = 0; // index of last started timeslot
+  private int timeslotCompleted = 0; // index of last completed timeslot
   private boolean running = false; // true to run, false to stop
+  private BrokerAdapter adapter;
   
   //private SampleBrokerService service;
 
@@ -110,13 +115,16 @@ public class SampleBroker
     brokerNames = new ArrayList<String>();
     portfolioManagerService.init(this);
     marketManagerService.init(this);
-    for (Class<?> clazz: Arrays.asList(BrokerAccept.class,
+    for (Class<?> clazz: Arrays.asList(BankTransaction.class,
+                                       BrokerAccept.class,
                                        CashPosition.class,
                                        Competition.class,
+                                       java.util.Properties.class,
                                        SimEnd.class,
                                        SimPause.class,
                                        SimResume.class,
                                        SimStart.class,
+                                       TimeslotComplete.class,
                                        TimeslotUpdate.class)) {
       router.registerMessageHandler(this, clazz);
     }
@@ -129,18 +137,15 @@ public class SampleBroker
   {
     // log in to server
     sendMessage(new BrokerAuthentication(adapter.getUsername(), "blank"));
-
-    // wait for session to end
-    synchronized (this) {
-      running = true;
-      while (running) {
-        try {
-          wait();
-        }
-        catch (InterruptedException ie) {
-          log.warn("Interrupted!");
-        }
-      }
+    
+    // start the activation thread
+    BrokerRunner runner = new BrokerRunner(this);
+    runner.start();
+    try {
+      runner.join();
+    }
+    catch (InterruptedException ie) {
+      log.warn("Interrupted!");
     }
   }
   
@@ -233,6 +238,19 @@ public class SampleBroker
   }
 
   // -------------------- message handlers ---------------------
+  //
+  // Note that these arrive in JMS threads; If they share data with the
+  // agent processing thread, they need to be synchronized.
+  
+  /**
+   * BankTransaction represents an interest payment. Value is positive for 
+   * credit, negative for debit. 
+   */
+  public void handleMessage (BankTransaction btx)
+  {
+    // TODO - handle this
+  }
+  
   /**
    * BrokerAccept comes out when our authentication credentials are accepted
    * and we become part of the game. Before this, we cannot send any messages
@@ -246,13 +264,11 @@ public class SampleBroker
   }
   
   /**
-   * CashPosition is the last message sent by Accounting.
-   * This is normally when any broker would submit its bids, so that's when
-   * this Broker will do it.
+   * CashPosition updates our current bank balance.
    */
   public void handleMessage (CashPosition cp)
   {
-    this.activate();
+    cash = cp.getBalance();
   }
   
   /**
@@ -332,12 +348,20 @@ public class SampleBroker
   }
   
   /**
+   * Receives the server configuration properties.
+   */
+  public void handleMessage (java.util.Properties serverProps)
+  {
+    // TODO - adapt to the server setup.
+  }
+  
+  /**
    * Updates the sim clock on receipt of the TimeslotUpdate message,
    * which should be the first to arrive in each timeslot. We have to disable
    * all the timeslots prior to the first enabled slot, then create and enable
    * all the enabled slots.
    */
-  public void handleMessage (TimeslotUpdate tu)
+  public synchronized void handleMessage (TimeslotUpdate tu)
   {
     Timeslot old = timeslotRepo.currentTimeslot();
     timeService.updateTime(); // here is the clock update
@@ -349,6 +373,7 @@ public class SampleBroker
       Timeslot closed = 
           timeslotRepo.findOrCreateBySerialNumber(index);
       closed.disable();
+      currentTimeslot = index;
     }
     for (Timeslot ts : tu.getEnabled()) {
       Timeslot open =
@@ -356,18 +381,83 @@ public class SampleBroker
       open.enable();
     }
   }
-
+  
   /**
-   * In each timeslot, we must update our portfolio and trade in the 
-   * wholesale market.
+   * CashPosition is the last message sent by Accounting.
+   * This is normally when any broker would submit its bids, so that's when
+   * this Broker will do it.
    */
-  public void activate ()
+  public synchronized void handleMessage (TimeslotComplete tc)
   {
-    Timeslot current = timeslotRepo.currentTimeslot();
-    log.info("activate at " + timeService.getCurrentDateTime().toString()
-             + ", timeslot " + current.getSerialNumber());
-    portfolioManagerService.activate();
-    marketManagerService.activate();
+    if (tc.getTimeslotIndex() == currentTimeslot) {
+      timeslotCompleted = currentTimeslot;
+      notifyAll();
+    }
+    else {
+      // missed a timeslot
+      log.warn("Skipped timeslot " + tc.getTimeslotIndex());
+    }
+  }
+
+  // The worker thread comes here to wait for the next activation
+  synchronized int waitForActivation (int index)
+  {
+    try {
+      while (running && (timeslotCompleted <= index))
+        wait();
+    }
+    catch (InterruptedException ie) {
+      log.warn("activation interrupted: " + ie);
+    }
+    return timeslotCompleted;
+  }
+  
+  /**
+   * Thread to encapsulate internal broker operations, allowing JMS threads
+   * to return quickly and stay in sync with the server. 
+   */
+  class BrokerRunner extends Thread
+  {
+    SampleBroker parent;
+    int timeslotIndex = 0;
+    
+    public BrokerRunner (SampleBroker parent)
+    {
+      super();
+      this.parent = parent;
+    }
+    
+    /**
+     * In each timeslot, we must update our portfolio and trade in the 
+     * wholesale market.
+     */
+    public void run ()
+    {
+      running = true;
+
+      while (true) {
+        timeslotIndex = waitForActivation(timeslotIndex);
+        if (!running) {
+          log.info("worker thread exits at ts " + timeslotIndex);
+          return;
+        }
+        
+        Timeslot current = timeslotRepo.currentTimeslot();
+        log.info("activate at " + timeService.getCurrentDateTime().toString()
+                 + ", timeslot " + current.getSerialNumber());
+        if (timeslotIndex < currentTimeslot) {
+          log.warn("broker late pm, ts="+ timeslotIndex);
+          continue;
+        }
+        portfolioManagerService.activate();
+
+        if (timeslotIndex < currentTimeslot) {
+          log.warn("broker late mm, ts="+ timeslotIndex);
+          continue;
+        }
+        marketManagerService.activate();
+      }
+    }
   }
   
   /**
