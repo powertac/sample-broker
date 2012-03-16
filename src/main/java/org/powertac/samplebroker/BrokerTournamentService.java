@@ -174,7 +174,7 @@ public class BrokerTournamentService {
 					return true;
 
 				} else if (doneNode != null) {
-					String checkDone = doneNode.getFirstChild().getNodeValue();
+					
 					return false;
 
 				} else {
