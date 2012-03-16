@@ -134,7 +134,7 @@ public class BrokerTournamentService {
 			InputStream input = conn.getInputStream();
 
 			if (this.responseType.compareTo("xml") == 0) {
-
+				System.out.println("Parsing message..");
 				DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory
 						.newInstance();
 				DocumentBuilder docBuilder = docBuilderFactory
@@ -160,8 +160,7 @@ public class BrokerTournamentService {
 					return false;
 
 				} else if (loginNode != null) {
-					String checkLogin = loginNode.getFirstChild()
-							.getNodeValue();
+					System.out.println("Login Message Received!");
 					String checkJmsUrl = doc.getElementsByTagName("jmsUrl").item(0).getFirstChild().getNodeValue();
 					String checkToken = doc.getElementsByTagName("gameToken").item(0).getFirstChild().getNodeValue();
 					log.info("Login message received! ");
@@ -203,6 +202,7 @@ public class BrokerTournamentService {
 		} catch (Exception e) { // exception hit return false
 			maxTry--;
 			System.out.println("Retries left: " + maxTry);
+			e.printStackTrace();
 			log.fatal("Error making connection to Tournament Scheduler");
 			log.fatal(e.getMessage());
 			// Sleep and wait for network
