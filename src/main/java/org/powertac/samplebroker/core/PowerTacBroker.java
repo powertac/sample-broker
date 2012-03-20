@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.powertac.samplebroker;
+package org.powertac.samplebroker.core;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,14 +21,15 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.joda.time.Instant;
-import org.powertac.common.BankTransaction;
 import org.powertac.common.Broker;
-import org.powertac.common.CashPosition;
 import org.powertac.common.Competition;
 import org.powertac.common.CustomerInfo;
 import org.powertac.common.IdGenerator;
 import org.powertac.common.TimeService;
 import org.powertac.common.Timeslot;
+import org.powertac.samplebroker.interfaces.Activatable;
+import org.powertac.samplebroker.interfaces.BrokerContext;
+import org.powertac.samplebroker.interfaces.Initializable;
 import org.powertac.common.msg.BrokerAccept;
 import org.powertac.common.msg.BrokerAuthentication;
 import org.powertac.common.msg.SimEnd;
@@ -39,6 +40,7 @@ import org.powertac.common.msg.TimeslotComplete;
 import org.powertac.common.msg.TimeslotUpdate;
 import org.powertac.common.repo.CustomerRepo;
 import org.powertac.common.repo.TimeslotRepo;
+import org.powertac.common.spring.SpringApplicationContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -50,13 +52,10 @@ import org.springframework.stereotype.Service;
  * @author John Collins
  */
 @Service
-public class SampleBroker
+public class PowerTacBroker
+implements BrokerContext
 {
-  static private Logger log = Logger.getLogger(SampleBroker.class);
-
-  // Services that need to be replicated in a remote broker
-  //@Autowired
-  //private BrokerProxy brokerProxyService;
+  static private Logger log = Logger.getLogger(PowerTacBroker.class);
   
   @Autowired
   private TimeService timeService;
@@ -67,12 +66,6 @@ public class SampleBroker
   // Broker components
   @Autowired
   private MessageDispatcher router;
-  
-  @Autowired
-  private PortfolioManagerService portfolioManagerService;
-  
-  @Autowired
-  private MarketManagerService marketManagerService;
 
   @Autowired
   private CustomerRepo customerRepo;
@@ -86,18 +79,15 @@ public class SampleBroker
   // Broker keeps its own records
   private ArrayList<String> brokerNames;
   private Instant baseTime = null;
-  private double cash = 0;
   private int currentTimeslot = 0; // index of last started timeslot
   private int timeslotCompleted = 0; // index of last completed timeslot
   private boolean running = false; // true to run, false to stop
   private BrokerAdapter adapter;
-  
-  //private SampleBrokerService service;
 
   /**
    * Default constructor for remote broker deployment
    */
-  public SampleBroker ()
+  public PowerTacBroker ()
   {
     super();
   }
@@ -113,13 +103,17 @@ public class SampleBroker
 
     // Set up components
     brokerNames = new ArrayList<String>();
-    portfolioManagerService.init(this);
-    marketManagerService.init(this);
-    for (Class<?> clazz: Arrays.asList(BankTransaction.class,
-                                       BrokerAccept.class,
-                                       CashPosition.class,
+    
+    // initialize services
+    List<Initializable> initializers =
+        SpringApplicationContext.listBeansOfType(Initializable.class);
+    for (Initializable svc : initializers) {
+      svc.initialize(this);
+    }
+
+    // register message handlers
+    for (Class<?> clazz: Arrays.asList(BrokerAccept.class,
                                        Competition.class,
-                                       java.util.Properties.class,
                                        SimEnd.class,
                                        SimPause.class,
                                        SimResume.class,
@@ -150,17 +144,18 @@ public class SampleBroker
   }
   
   // ------------- Accessors ----------------
-  /**
-   * Returns the message router
-   */
-  public MessageDispatcher getRouter ()
-  {
-    return router;
-  }
+//  /**
+//   * Returns the message router
+//   */
+//  public MessageDispatcher getRouter ()
+//  {
+//    return router;
+//  }
   
   /**
    * Returns the "real" broker underneath this monstrosity
    */
+  @Override
   public Broker getBroker ()
   {
     return adapter;
@@ -169,22 +164,24 @@ public class SampleBroker
   /**
    * Returns the username for this broker
    */
+  @Override
   public String getBrokerUsername ()
   {
     return adapter.getUsername();
   }
   
-  /**
-   * Returns the customerRepo. Cannot be called until after initialization.
-   */
-  public CustomerRepo getCustomerRepo ()
-  {
-    return customerRepo;
-  }
+//  /**
+//   * Returns the customerRepo. Cannot be called until after initialization.
+//   */
+//  public CustomerRepo getCustomerRepo ()
+//  {
+//    return customerRepo;
+//  }
 
   /**
    * Returns the simulation base time
    */
+  @Override
   public Instant getBaseTime()
   {
     return baseTime;
@@ -193,6 +190,7 @@ public class SampleBroker
   /**
    * Returns the length of the standard data array (24h * 7d)
    */
+  @Override
   public int getUsageRecordLength ()
   {
     return usageRecordLength;
@@ -201,7 +199,8 @@ public class SampleBroker
   /**
    * Returns the broker's list of competing brokers - non-public
    */
-  List<String> getBrokerList ()
+  @Override
+  public List<String> getBrokerList ()
   {
     return brokerNames;
   }
@@ -209,6 +208,7 @@ public class SampleBroker
   /**
    * Delegates registrations to the router
    */
+  @Override
   public void registerMessageHandler (Object handler, Class<?> messageType)
   {
     router.registerMessageHandler(handler, messageType);
@@ -229,6 +229,7 @@ public class SampleBroker
   /**
    * Sends an outgoing message. May need to be reimplemented in a remote broker.
    */
+  @Override
   public void sendMessage (Object message)
   {
     if (message != null) {
@@ -243,15 +244,6 @@ public class SampleBroker
   // agent processing thread, they need to be synchronized.
   
   /**
-   * BankTransaction represents an interest payment. Value is positive for 
-   * credit, negative for debit. 
-   */
-  public void handleMessage (BankTransaction btx)
-  {
-    // TODO - handle this
-  }
-  
-  /**
    * BrokerAccept comes out when our authentication credentials are accepted
    * and we become part of the game. Before this, we cannot send any messages
    * other than BrokerAuthentication. Also, note that the ID prefix needs to be
@@ -261,14 +253,6 @@ public class SampleBroker
   {
     adapter.setEnabled(true);
     IdGenerator.setPrefix(accept.getPrefix());
-  }
-  
-  /**
-   * CashPosition updates our current bank balance.
-   */
-  public void handleMessage (CashPosition cp)
-  {
-    cash = cp.getBalance();
   }
   
   /**
@@ -348,14 +332,6 @@ public class SampleBroker
   }
   
   /**
-   * Receives the server configuration properties.
-   */
-  public void handleMessage (java.util.Properties serverProps)
-  {
-    // TODO - adapt to the server setup.
-  }
-  
-  /**
    * Updates the sim clock on receipt of the TimeslotUpdate message,
    * which should be the first to arrive in each timeslot. We have to disable
    * all the timeslots prior to the first enabled slot, then create and enable
@@ -418,10 +394,10 @@ public class SampleBroker
    */
   class BrokerRunner extends Thread
   {
-    SampleBroker parent;
+    PowerTacBroker parent;
     int timeslotIndex = 0;
     
-    public BrokerRunner (SampleBroker parent)
+    public BrokerRunner (PowerTacBroker parent)
     {
       super();
       this.parent = parent;
@@ -431,6 +407,7 @@ public class SampleBroker
      * In each timeslot, we must update our portfolio and trade in the 
      * wholesale market.
      */
+    @Override
     public void run ()
     {
       running = true;
@@ -445,17 +422,15 @@ public class SampleBroker
         Timeslot current = timeslotRepo.currentTimeslot();
         log.info("activate at " + timeService.getCurrentDateTime().toString()
                  + ", timeslot " + current.getSerialNumber());
-        if (timeslotIndex < currentTimeslot) {
-          log.warn("broker late pm, ts="+ timeslotIndex);
-          continue;
+        List<Activatable> services =
+            SpringApplicationContext.listBeansOfType(Activatable.class);
+        for (Activatable svc : services) {
+          if (timeslotIndex < currentTimeslot) {
+            log.warn("broker late, ts="+ timeslotIndex);
+            break;
+          }
+          svc.activate(timeslotIndex);
         }
-        portfolioManagerService.activate();
-
-        if (timeslotIndex < currentTimeslot) {
-          log.warn("broker late mm, ts="+ timeslotIndex);
-          continue;
-        }
-        marketManagerService.activate();
       }
     }
   }

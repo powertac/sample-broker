@@ -35,6 +35,11 @@ import org.powertac.common.msg.TariffStatus;
 import org.powertac.common.repo.CustomerRepo;
 import org.powertac.common.repo.TariffRepo;
 import org.powertac.common.repo.TimeslotRepo;
+import org.powertac.samplebroker.interfaces.Activatable;
+import org.powertac.samplebroker.interfaces.BrokerContext;
+import org.powertac.samplebroker.interfaces.Initializable;
+import org.powertac.samplebroker.interfaces.MarketManager;
+import org.powertac.samplebroker.interfaces.PortfolioManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -44,17 +49,21 @@ import org.springframework.stereotype.Service;
  * @author John Collins
  */
 @Service
-public class PortfolioManagerService implements PortfolioManager
+public class PortfolioManagerService 
+implements PortfolioManager, Initializable, Activatable
 {
   static private Logger log = Logger.getLogger(PortfolioManagerService.class);
   
-  private SampleBroker broker; // master
+  private BrokerContext broker; // master
   
   @Autowired
   private TimeslotRepo timeslotRepo;
   
   @Autowired
   private TariffRepo tariffRepo;
+  
+  @Autowired
+  private CustomerRepo customerRepo;
   
   @Autowired
   private MarketManager marketManager;
@@ -89,8 +98,9 @@ public class PortfolioManagerService implements PortfolioManager
   /**
    * Sets up message handling
    */
+  @Override
   @SuppressWarnings("unchecked")
-  public void init (SampleBroker broker)
+  public void initialize (BrokerContext broker)
   {
     this.broker = broker;
     customerProfiles = new HashMap<PowerType,
@@ -107,10 +117,6 @@ public class PortfolioManagerService implements PortfolioManager
   }
   
   // -------------- data access ------------------
-  private CustomerRepo getCustomerRepo ()
-  {
-    return broker.getCustomerRepo();
-  }
   
   /**
    * Returns the CustomerRecord for the given type and customer, creating it
@@ -201,7 +207,7 @@ public class PortfolioManagerService implements PortfolioManager
    */
   public void handleMessage (CustomerBootstrapData cbd)
   {
-    CustomerInfo customer = getCustomerRepo().findByName(cbd.getCustomerName());
+    CustomerInfo customer = customerRepo.findByName(cbd.getCustomerName());
     CustomerRecord record = getCustomerRecordByPowerType(cbd.getPowerType(), customer);
     int offset = (timeslotRepo.currentTimeslot().getSerialNumber()
                   - cbd.getNetUsage().length);
@@ -279,7 +285,7 @@ public class PortfolioManagerService implements PortfolioManager
    * @see org.powertac.samplebroker.PortfolioManager#activate()
    */
   @Override
-  public void activate ()
+  public void activate (int timeslotIndex)
   {
     if (customerSubscriptions.size() == 0) {
       // we have no tariffs

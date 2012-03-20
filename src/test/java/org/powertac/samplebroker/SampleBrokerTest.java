@@ -28,6 +28,10 @@ import org.powertac.common.CustomerInfo;
 import org.powertac.common.IdGenerator;
 import org.powertac.common.msg.BrokerAccept;
 import org.powertac.common.repo.CustomerRepo;
+import org.powertac.common.spring.SpringApplicationContext;
+import org.powertac.samplebroker.core.MessageDispatcher;
+import org.powertac.samplebroker.core.PowerTacBroker;
+import org.springframework.context.ApplicationContext;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /**
@@ -39,9 +43,8 @@ public class SampleBrokerTest
 {
   private Instant baseTime;
 
-  private SampleBroker broker;
-  private MarketManagerService marketManagerService;
-  private PortfolioManagerService portfolioManagerService;
+  private PowerTacBroker broker;
+  private CustomerRepo customerRepo;
   
   @Before
   public void setUp () throws Exception
@@ -50,38 +53,31 @@ public class SampleBrokerTest
     baseTime = new DateTime(2011, 2, 1, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
     // initialize the broker under test
-    broker = new SampleBroker();
+    broker = new PowerTacBroker();
     
     // set up the autowired dependencies
-    marketManagerService = mock(MarketManagerService.class);
-    ReflectionTestUtils.setField(broker, "marketManagerService", marketManagerService);
-    portfolioManagerService = mock(PortfolioManagerService.class);
-    ReflectionTestUtils.setField(broker, "portfolioManagerService", portfolioManagerService);
+    ApplicationContext ctx = mock(ApplicationContext.class);
+    SpringApplicationContext sac = new SpringApplicationContext();
+    sac.setApplicationContext(ctx);
     MessageDispatcher messageDispatcher = new MessageDispatcher();
     ReflectionTestUtils.setField(broker, "router", messageDispatcher);
-    CustomerRepo customerRepo = new CustomerRepo();
+    customerRepo = new CustomerRepo();
     ReflectionTestUtils.setField(broker, "customerRepo", customerRepo);
 
     broker.init("Sample");
   }
   
   /**
-   * Test method for {@link org.powertac.samplebroker.SampleBroker#SampleBroker(java.lang.String, org.powertac.samplebroker.SampleBrokerService)}.
+   * Test method for {@link org.powertac.samplebroker.core.PowerTacBroker#SampleBroker(java.lang.String, org.powertac.samplebroker.SampleBrokerService)}.
    */
   @Test
   public void testSampleBroker ()
   {
-    //ArgumentCaptor<BrokerAuthentication> login = 
-    //    ArgumentCaptor.forClass(BrokerAuthentication.class);
-    //verify(messageDispatcher).sendMessage(login.capture());
-    verify(marketManagerService).init(broker);
-    verify(portfolioManagerService).init(broker);
-    //verify(messageDispatcher, times(8)).registerMessageHandler(same(broker), isA(Class.class));
     assertFalse(broker.getBroker().isEnabled());
   }
 
   /**
-   * Test method for {@link org.powertac.samplebroker.SampleBroker#isEnabled()}.
+   * Test method for {@link org.powertac.samplebroker.core.PowerTacBroker#isEnabled()}.
    */
   @Test
   public void testIsEnabled ()
@@ -93,7 +89,7 @@ public class SampleBrokerTest
   }
 
   /**
-   * Test method for {@link org.powertac.samplebroker.SampleBroker#receiveMessage(java.lang.Object)}.
+   * Test method for {@link org.powertac.samplebroker.core.PowerTacBroker#receiveMessage(java.lang.Object)}.
    */
   @Test
   public void testReceiveCompetition ()
@@ -115,6 +111,6 @@ public class SampleBrokerTest
     // send to broker and check
     broker.getBroker().receiveMessage(comp);
     assertEquals("2 brokers", 2, broker.getBrokerList().size());
-    assertEquals("3 customers", 3, broker.getCustomerRepo().count());
+    assertEquals("3 customers", 3, customerRepo.count());
   }
 }

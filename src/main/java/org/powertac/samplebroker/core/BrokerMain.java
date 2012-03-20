@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  */
-package org.powertac.samplebroker;
+package org.powertac.samplebroker.core;
 
 //import org.apache.log4j.Logger;
 import org.springframework.context.support.AbstractApplicationContext;
@@ -49,8 +49,8 @@ public class BrokerMain
     }
     
     // find the Broker and JmsManagementService beans, hook up the jms queue
-    SampleBroker broker =
-        (SampleBroker)context.getBeansOfType(SampleBroker.class).values().toArray()[0];
+    PowerTacBroker broker =
+        (PowerTacBroker)context.getBeansOfType(PowerTacBroker.class).values().toArray()[0];
     broker.init(username);
     JmsManagementService jmsm =
         (JmsManagementService)context.getBeansOfType(JmsManagementService.class).values().toArray()[0];

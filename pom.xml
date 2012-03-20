@@ -88,7 +88,7 @@
          </executions>
         <configuration>
           <executable>java</executable>
-          <commandlineArgs>-server -Xmx512m -classpath %classpath org.powertac.samplebroker.BrokerMain ${exec.args}</commandlineArgs>
+          <commandlineArgs>-server -Xmx512m -classpath %classpath org.powertac.samplebroker.core.BrokerMain ${exec.args}</commandlineArgs>
         </configuration>
       </plugin>
     </plugins>
