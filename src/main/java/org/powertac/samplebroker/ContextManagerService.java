@@ -25,6 +25,7 @@ import org.powertac.common.Competition;
 import org.powertac.common.CustomerInfo;
 import org.powertac.common.Timeslot;
 import org.powertac.common.msg.BrokerAccept;
+import org.powertac.common.msg.DistributionReport;
 import org.powertac.common.msg.SimEnd;
 import org.powertac.common.msg.SimPause;
 import org.powertac.common.msg.SimResume;
@@ -61,6 +62,7 @@ implements Initializable
     master = broker;
     for (Class<?> clazz: Arrays.asList(BankTransaction.class,
                                        CashPosition.class,
+                                       DistributionReport.class,
                                        Competition.class,
                                        java.util.Properties.class)) {
       broker.registerMessageHandler(this, clazz);
@@ -87,6 +89,14 @@ implements Initializable
   public void handleMessage (CashPosition cp)
   {
     cash = cp.getBalance();
+  }
+  
+  /**
+   * DistributionReport gives total consumption and production.
+   */
+  public void handleMessage (DistributionReport dr)
+  {
+    // TODO - use this data
   }
   
   /**
