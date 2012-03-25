@@ -342,18 +342,20 @@ implements BrokerContext
     Timeslot old = timeslotRepo.currentTimeslot();
     timeService.updateTime(); // here is the clock update
     log.info("TimeslotUpdate at " + timeService.getCurrentDateTime().toString());
-    List<Timeslot> enabled = tu.getEnabled();
+    //List<Timeslot> enabled = tu.getEnabled();
     for (int index = old.getSerialNumber();
-         index < enabled.get(0).getSerialNumber();
+         index < tu.getFirstEnabled();
          index ++) {
       Timeslot closed = 
           timeslotRepo.findOrCreateBySerialNumber(index);
       closed.disable();
       currentTimeslot = index;
     }
-    for (Timeslot ts : tu.getEnabled()) {
+    for (int index = tu.getFirstEnabled();
+         index <= tu.getLastEnabled();
+         index++) {
       Timeslot open =
-          timeslotRepo.findOrCreateBySerialNumber(ts.getSerialNumber());
+          timeslotRepo.findOrCreateBySerialNumber(index);
       open.enable();
     }
   }
