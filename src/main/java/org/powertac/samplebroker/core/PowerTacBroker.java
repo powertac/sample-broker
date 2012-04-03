@@ -30,6 +30,7 @@ import org.powertac.common.Timeslot;
 import org.powertac.samplebroker.interfaces.Activatable;
 import org.powertac.samplebroker.interfaces.BrokerContext;
 import org.powertac.samplebroker.interfaces.Initializable;
+import org.powertac.common.config.ConfigurableValue;
 import org.powertac.common.msg.BrokerAccept;
 import org.powertac.common.msg.BrokerAuthentication;
 import org.powertac.common.msg.SimEnd;
@@ -66,6 +67,12 @@ implements BrokerContext
   // Broker components
   @Autowired
   private MessageDispatcher router;
+  
+  @Autowired
+  private JmsManagementService jmsManagementService;
+  
+  @Autowired
+  private BrokerMessageReceiver brokerMessageReceiver;
 
   @Autowired
   private CustomerRepo customerRepo;
@@ -75,6 +82,11 @@ implements BrokerContext
   // types take the viewpoint of the customer, while market-related types
   // take the viewpoint of the broker.
   private int usageRecordLength = 7 * 24; // one week
+  
+  @ConfigurableValue(valueType = "Integer",
+      description = "Login retry timeout")
+  private Integer loginRetryTimeout = 5000;
+
 
   // Broker keeps its own records
   private ArrayList<String> brokerNames;
@@ -97,7 +109,7 @@ implements BrokerContext
    * for incoming messages.
    */
   @SuppressWarnings("unchecked")
-  public void init (String username)
+  public void init (String username, String jmsBrokerUrl)
   {
     adapter = new BrokerAdapter(username);
 
@@ -122,6 +134,11 @@ implements BrokerContext
                                        TimeslotUpdate.class)) {
       router.registerMessageHandler(this, clazz);
     }
+    
+    String brokerQueueName = adapter.toQueueName();
+    jmsManagementService.init(jmsBrokerUrl, brokerQueueName);
+    jmsManagementService.registerMessageListener(brokerMessageReceiver,
+                                                 brokerQueueName);
   }
   
   /**
@@ -129,8 +146,32 @@ implements BrokerContext
    */
   public void run ()
   {
-    // log in to server
-    sendMessage(new BrokerAuthentication(adapter.getUsername(), "blank"));
+    // wait for the JMS broker to show up and create our queue
+    //jmsManagementService.createQueue(adapter);
+    
+    // Log in to server.
+    // In case the server does not respond within  second
+    synchronized(this) {
+      while (!adapter.isEnabled()) {
+        try {
+          sendMessage(new BrokerAuthentication(adapter.getUsername(), "blank"));
+          wait(loginRetryTimeout);
+        }
+        catch (InterruptedException e) {
+          log.warn("Interrupted!");
+          break;
+        }
+        catch (Exception ex) {
+          log.info("log attempt failed " + ex.toString());
+          try {
+            Thread.sleep(loginRetryTimeout);
+          }
+          catch (InterruptedException e) {
+            // ignore
+          }
+        }
+      }
+    }
     
     // start the activation thread
     BrokerRunner runner = new BrokerRunner(this);
@@ -249,10 +290,11 @@ implements BrokerContext
    * other than BrokerAuthentication. Also, note that the ID prefix needs to be
    * set before any server-visible entities are created (such as tariff specs).
    */
-  public void handleMessage (BrokerAccept accept)
+  public synchronized void handleMessage (BrokerAccept accept)
   {
     adapter.setEnabled(true);
     IdGenerator.setPrefix(accept.getPrefix());
+    notifyAll();
   }
   
   /**
