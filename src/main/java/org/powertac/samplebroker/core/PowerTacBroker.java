@@ -17,6 +17,7 @@ package org.powertac.samplebroker.core;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -135,10 +136,18 @@ implements BrokerContext
       router.registerMessageHandler(this, clazz);
     }
     
-    String brokerQueueName = adapter.toQueueName();
+    String brokerQueueName = generateQueueName();
+    adapter.setQueueName(brokerQueueName);
     jmsManagementService.init(jmsBrokerUrl, brokerQueueName);
     jmsManagementService.registerMessageListener(brokerMessageReceiver,
                                                  brokerQueueName);
+  }
+  
+  private String generateQueueName ()
+  {
+    long time = new Date().getTime() & 0xffffffff;
+    long ran = (long)(time * (Math.random() + 0.5));
+    return adapter.getUsername() + "." + Long.toString(ran, 31);
   }
   
   /**
@@ -154,7 +163,9 @@ implements BrokerContext
     synchronized(this) {
       while (!adapter.isEnabled()) {
         try {
-          sendMessage(new BrokerAuthentication(adapter.getUsername(), "blank"));
+          sendMessage(new BrokerAuthentication(adapter.getUsername(),
+                                               "blank",
+                                               adapter.toQueueName()));
           wait(loginRetryTimeout);
         }
         catch (InterruptedException e) {
@@ -294,6 +305,8 @@ implements BrokerContext
   {
     adapter.setEnabled(true);
     IdGenerator.setPrefix(accept.getPrefix());
+    adapter.setKey(accept.getKey());
+    router.setKey(accept.getKey());
     notifyAll();
   }
   
