@@ -64,7 +64,7 @@ public class SampleBrokerTest
     customerRepo = new CustomerRepo();
     ReflectionTestUtils.setField(broker, "customerRepo", customerRepo);
 
-    broker.init("Sample", null);
+    broker.init("Sample");
   }
   
   /**

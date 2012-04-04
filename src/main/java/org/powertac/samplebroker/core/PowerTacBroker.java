@@ -110,7 +110,7 @@ implements BrokerContext
    * for incoming messages.
    */
   @SuppressWarnings("unchecked")
-  public void init (String username, String jmsBrokerUrl)
+  public void init (String username)
   {
     adapter = new BrokerAdapter(username);
 
@@ -135,31 +135,21 @@ implements BrokerContext
                                        TimeslotUpdate.class)) {
       router.registerMessageHandler(this, clazz);
     }
-    
-    String brokerQueueName = generateQueueName();
-    adapter.setQueueName(brokerQueueName);
-    if (null != jmsBrokerUrl) {
-      // if null, assume local broker without jms connectivity
-      jmsManagementService.init(jmsBrokerUrl, brokerQueueName);
-      jmsManagementService.registerMessageListener(brokerMessageReceiver,
-                                                   brokerQueueName);
-    }
   }
-  
-  private String generateQueueName ()
-  {
-    long time = new Date().getTime() & 0xffffffff;
-    long ran = (long)(time * (Math.random() + 0.5));
-    return adapter.getUsername() + "." + Long.toString(ran, 31);
-  }
-  
+
   /**
    * Logs in and waits for the sim to end.
    */
-  public void run ()
+  public void run (String jmsBrokerUrl)
   {
     // wait for the JMS broker to show up and create our queue
-    //jmsManagementService.createQueue(adapter);
+    
+    String brokerQueueName = generateQueueName();
+    adapter.setQueueName(brokerQueueName);
+    // if null, assume local broker without jms connectivity
+    jmsManagementService.init(jmsBrokerUrl, brokerQueueName);
+    jmsManagementService.registerMessageListener(brokerMessageReceiver,
+                                                 brokerQueueName);
     
     // Log in to server.
     // In case the server does not respond within  second
@@ -196,6 +186,13 @@ implements BrokerContext
     catch (InterruptedException ie) {
       log.warn("Interrupted!");
     }
+  }
+
+  private String generateQueueName ()
+  {
+    long time = new Date().getTime() & 0xffffffff;
+    long ran = (long)(time * (Math.random() + 0.5));
+    return adapter.getUsername() + "." + Long.toString(ran, 31);
   }
   
   // ------------- Accessors ----------------

@@ -51,8 +51,8 @@ public class BrokerMain
     // find the Broker and JmsManagementService beans, hook up the jms queue
     PowerTacBroker broker =
         (PowerTacBroker)context.getBeansOfType(PowerTacBroker.class).values().toArray()[0];
-    broker.init(username, jmsBrokerUrl);
-    broker.run();
+    broker.init(username);
+    broker.run(jmsBrokerUrl);
     
     // if we get here, it's time to exit
     System.exit(0);
