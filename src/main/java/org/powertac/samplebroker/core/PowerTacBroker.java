@@ -60,6 +60,9 @@ implements BrokerContext
   static private Logger log = Logger.getLogger(PowerTacBroker.class);
   
   @Autowired
+  private BrokerPropertiesService propertiesService;
+  
+  @Autowired
   private TimeService timeService;
   
   @Autowired
@@ -88,6 +91,18 @@ implements BrokerContext
       description = "Login retry timeout")
   private Integer loginRetryTimeout = 5000;
 
+  @ConfigurableValue(valueType = "String",
+          description = "Broker username")
+  String username = "Sample";
+
+  @ConfigurableValue(valueType = "String",
+          description = "Broker login password")
+  String password = "secret";
+  
+  @ConfigurableValue(valueType = "String",
+          description = "url for the JMS message broker")
+  String jmsBrokerUrl = "tcp://localhost:61616";
+
 
   // Broker keeps its own records
   private ArrayList<String> brokerNames;
@@ -105,6 +120,47 @@ implements BrokerContext
     super();
   }
   
+  /**
+   * Processes the command line arguments.
+   */
+  public void processCmdLine (String[] args)
+  {
+    if (args.length <= 2 && (args.length == 0 || !args[0].startsWith("-"))) {
+      // old-style command line has username and jms url
+      processOldCmdLine(args);
+    }
+    else {
+      // new-style cmd line
+      processCli(args);
+    }
+    
+    // Initialize and run.
+    init(username);
+    run(jmsBrokerUrl);
+  }
+
+  private void processOldCmdLine (String[] args)
+  {
+    // config first, then allow override
+    propertiesService.configureMe(this);
+    
+    // Get username from command-line.
+    if (args.length < 1) {
+      System.out.println("Username not given - default is 'Sample'");
+    }
+    else {
+      username = args[0];
+      if (args.length == 2) {
+        jmsBrokerUrl = args[1];
+      }
+    }
+  }
+  
+  private void processCli (String[] args)
+  {
+    
+  }
+
   /**
    * Sets up the "adapter" broker, initializes the other services, registers
    * for incoming messages.

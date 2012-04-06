@@ -34,25 +34,10 @@ public class BrokerMain
   {
     AbstractApplicationContext context = new ClassPathXmlApplicationContext("broker.xml");
     context.registerShutdownHook();
-    
-    // Get username from command-line.
-    String username = "Sample";
-    String jmsBrokerUrl = null;    
-    if (args.length < 1) {
-      System.out.println("Username not given - default is 'Sample'");
-    }
-    else {
-      username = args[0];
-      if (args.length == 2) {
-        jmsBrokerUrl = args[1];
-      }
-    }
-    
-    // find the Broker and JmsManagementService beans, hook up the jms queue
+    // get the broker reference and delegate the rest
     PowerTacBroker broker =
-        (PowerTacBroker)context.getBeansOfType(PowerTacBroker.class).values().toArray()[0];
-    broker.init(username);
-    broker.run(jmsBrokerUrl);
+            (PowerTacBroker)context.getBeansOfType(PowerTacBroker.class).values().toArray()[0];
+    broker.processCmdLine(args);
     
     // if we get here, it's time to exit
     System.exit(0);
