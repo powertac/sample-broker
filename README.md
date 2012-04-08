@@ -4,6 +4,6 @@ The current version assumes the server is running on localhost, and is not picky
 
 You can run the broker from the command line using maven, as
 
-`mvn exec:exec -Dexec.args="username server-url"`
+`mvn exec:exec [-Dexec.args="--config config-file.properties"]`
 
-where `server-url` is an option argument needed if the server cannot be found at tcp://localhost:61616.
+where config-file.properties is an optional properties file that can set username, password, server URL, and other broker properties. If not given, the file broker.properties in the current working directory will be used. In this case, it is enough to simply run the broker as `mvn exec:exec`.

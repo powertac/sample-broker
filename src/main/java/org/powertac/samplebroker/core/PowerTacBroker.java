@@ -15,10 +15,18 @@
  */
 package org.powertac.samplebroker.core;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+
+import joptsimple.OptionException;
+import joptsimple.OptionParser;
+import joptsimple.OptionSet;
+import joptsimple.OptionSpec;
 
 import org.apache.log4j.Logger;
 import org.joda.time.Instant;
@@ -89,19 +97,19 @@ implements BrokerContext
   
   @ConfigurableValue(valueType = "Integer",
       description = "Login retry timeout")
-  private Integer loginRetryTimeout = 5000;
+  private Integer loginRetryTimeout = 3000;
 
   @ConfigurableValue(valueType = "String",
           description = "Broker username")
-  String username = "Sample";
+  private String username = "broker";
 
   @ConfigurableValue(valueType = "String",
           description = "Broker login password")
-  String password = "secret";
+  private String password = "password";
   
   @ConfigurableValue(valueType = "String",
           description = "url for the JMS message broker")
-  String jmsBrokerUrl = "tcp://localhost:61616";
+  private String jmsBrokerUrl = "tcp://localhost:61616";
 
 
   // Broker keeps its own records
@@ -158,7 +166,32 @@ implements BrokerContext
   
   private void processCli (String[] args)
   {
+    OptionParser parser = new OptionParser();
+    OptionSpec<String> jmsUrlOption =
+            parser.accepts("jms-url").withRequiredArg().ofType(String.class);
+    OptionSpec<File> configOption = 
+            parser.accepts("config").withRequiredArg().ofType(File.class);
     
+    // do the parse
+    OptionSet options = parser.parse(args);
+    
+    try {
+      // process broker options
+      if (options.has(configOption)) {
+        // set up config before trying to override values
+        File configFile = options.valueOf(configOption);
+        if (configFile.canRead()) {
+          propertiesService.setUserConfig(configFile);
+        }
+      }
+      if (options.has(jmsUrlOption))
+        propertiesService.setProperty("samplebroker.core.jmsManagementService.jmsBrokerUrl",
+                                      options.valueOf(jmsUrlOption));
+    }
+    catch (OptionException e) {
+      System.err.println("Bad command argument: " + e.toString());
+    }
+    propertiesService.configureMe(this);
   }
 
   /**
@@ -212,8 +245,7 @@ implements BrokerContext
     synchronized(this) {
       while (!adapter.isEnabled()) {
         try {
-          sendMessage(new BrokerAuthentication(adapter.getUsername(),
-                                               "blank",
+          sendMessage(new BrokerAuthentication(username, password,
                                                adapter.toQueueName()));
           wait(loginRetryTimeout);
         }

@@ -85,12 +85,12 @@ implements ApplicationContextAware
     // find and load the default properties file
     log.debug("lazyInit");
     try {
-      File defaultProps = new File("config/broker.properties");
-      log.debug("adding " + defaultProps.getName());
+      File defaultProps = new File("broker.properties");
+      log.info("adding " + defaultProps.getName());
       config.addConfiguration(new PropertiesConfiguration(defaultProps));
     }
     catch (Exception e1) {
-      log.warn("config/server.properties not found: " + e1.toString());
+      log.warn("broker.properties not found: " + e1.toString());
     }
     
     // set up the classpath props
@@ -125,20 +125,17 @@ implements ApplicationContextAware
     configurator.setConfiguration(config);
   }
   
-  public void setUserConfig (URL userConfigURL)
+  public void setUserConfig (File userConfig)
   {
     // then load the user-specified config
     try {
       PropertiesConfiguration pconfig = new PropertiesConfiguration();
-      pconfig.load(userConfigURL.openStream());
+      pconfig.load(userConfig);
       config.addConfiguration(pconfig);
-      log.debug("setUserConfig " + userConfigURL.toExternalForm());
-    }
-    catch (IOException e) {
-      log.error("IO error loading " + userConfigURL + ": " + e.toString());
+      log.debug("setUserConfig " + userConfig.getName());
     }
     catch (ConfigurationException e) {
-      log.error("Config error loading " + userConfigURL + ": " + e.toString());
+      log.error("Config error loading " + userConfig + ": " + e.toString());
     }
     lazyInit();
   }
