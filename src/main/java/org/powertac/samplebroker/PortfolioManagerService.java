@@ -207,7 +207,9 @@ implements PortfolioManager, Initializable, Activatable
    */
   public void handleMessage (CustomerBootstrapData cbd)
   {
-    CustomerInfo customer = customerRepo.findByName(cbd.getCustomerName());
+    CustomerInfo customer =
+            customerRepo.findByNameAndPowerType(cbd.getCustomerName(),
+                                                cbd.getPowerType());
     CustomerRecord record = getCustomerRecordByPowerType(cbd.getPowerType(), customer);
     int offset = (timeslotRepo.currentTimeslot().getSerialNumber()
                   - cbd.getNetUsage().length);
