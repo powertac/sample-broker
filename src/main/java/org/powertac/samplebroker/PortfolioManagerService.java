@@ -26,10 +26,12 @@ import org.powertac.common.Broker;
 import org.powertac.common.Competition;
 import org.powertac.common.CustomerInfo;
 import org.powertac.common.Rate;
+import org.powertac.common.Tariff;
 import org.powertac.common.TariffSpecification;
 import org.powertac.common.TariffTransaction;
 import org.powertac.common.TimeService;
 import org.powertac.common.enumerations.PowerType;
+import org.powertac.common.msg.BalancingOrder;
 import org.powertac.common.msg.CustomerBootstrapData;
 import org.powertac.common.msg.TariffStatus;
 import org.powertac.common.repo.CustomerRepo;
@@ -314,10 +316,17 @@ implements PortfolioManager, Initializable, Activatable
         rateValue = ((marketPrice + fixedPerKwh) * (1.0 + defaultMargin));
       else
         rateValue = (-1.0 * marketPrice / (1.0 + defaultMargin));
+      if (pt.isInterruptible())
+        rateValue *= 0.9; // price break for interruptible
       TariffSpecification spec =
           new TariffSpecification(broker.getBroker(), pt)
-        .withPeriodicPayment(defaultPeriodicPayment)
-        .addRate(new Rate().withValue(rateValue));
+              .withPeriodicPayment(defaultPeriodicPayment);
+      Rate rate = new Rate().withValue(rateValue);
+      if (pt.isInterruptible()) {
+        // set max curtailment
+        rate.withMaxCurtailment(0.5);
+      }
+      spec.addRate(rate);
       customerSubscriptions.put(spec, new HashMap<CustomerInfo, CustomerRecord>());
       tariffRepo.addSpecification(spec);
       broker.sendMessage(spec);
@@ -327,7 +336,19 @@ implements PortfolioManager, Initializable, Activatable
   // Checks to see whether our tariffs need fine-tuning
   private void improveTariffs()
   {
-    
+    // quick magic-number hack to inject a balancing order
+    int timeslotIndex = timeslotRepo.currentTimeslot().getSerialNumber();
+    if (371 == timeslotIndex) {
+      for (TariffSpecification spec : tariffRepo.findAllTariffSpecifications()) {
+        if (PowerType.INTERRUPTIBLE_CONSUMPTION == spec.getPowerType()) {
+          BalancingOrder order = new BalancingOrder(broker.getBroker(),
+                                                    spec, 
+                                                    0.5,
+                                                    spec.getRates().get(0).getMinValue() * 0.9);
+          broker.sendMessage(order);
+        }
+      }
+    }
   }
 
   // ------------- test-support methods ----------------
