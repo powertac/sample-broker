@@ -109,7 +109,7 @@ implements BrokerContext
   
   @ConfigurableValue(valueType = "String",
           description = "url for the JMS message broker")
-  private String jmsBrokerUrl = "tcp://localhost:61616";
+  private String jmsBrokerUrl = null;
 
 
   // Broker keeps its own records
@@ -133,7 +133,7 @@ implements BrokerContext
    */
   public void processCmdLine (String[] args)
   {
-    if (args.length <= 2 && (args.length == 0 || !args[0].startsWith("-"))) {
+    if (args.length <= 2 && args.length > 0 && !args[0].startsWith("-")) {
       // old-style command line has username and jms url
       processOldCmdLine(args);
     }
@@ -153,14 +153,10 @@ implements BrokerContext
     propertiesService.configureMe(this);
     
     // Get username from command-line.
-    if (args.length < 1) {
-      System.out.println("Username not given - default is 'Sample'");
-    }
-    else {
-      username = args[0];
-      if (args.length == 2) {
-        jmsBrokerUrl = args[1];
-      }
+
+    username = args[0];
+    if (args.length == 2) {
+      jmsBrokerUrl = args[1];
     }
   }
   
