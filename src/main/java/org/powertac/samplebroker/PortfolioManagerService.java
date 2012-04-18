@@ -317,7 +317,7 @@ implements PortfolioManager, Initializable, Activatable
       else
         rateValue = (-1.0 * marketPrice / (1.0 + defaultMargin));
       if (pt.isInterruptible())
-        rateValue *= 0.9; // price break for interruptible
+        rateValue *= 0.8; // Magic number!! price break for interruptible
       TariffSpecification spec =
           new TariffSpecification(broker.getBroker(), pt)
               .withPeriodicPayment(defaultPeriodicPayment);
