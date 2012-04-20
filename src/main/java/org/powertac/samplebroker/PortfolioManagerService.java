@@ -315,16 +315,17 @@ implements PortfolioManager, Initializable, Activatable
       if (pt.isConsumption())
         rateValue = ((marketPrice + fixedPerKwh) * (1.0 + defaultMargin));
       else
-        rateValue = (-1.0 * marketPrice / (1.0 + defaultMargin));
+        //rateValue = (-1.0 * marketPrice / (1.0 + defaultMargin));
+        rateValue = -1.0 * marketPrice;
       if (pt.isInterruptible())
-        rateValue *= 0.8; // Magic number!! price break for interruptible
+        rateValue *= 0.7; // Magic number!! price break for interruptible
       TariffSpecification spec =
           new TariffSpecification(broker.getBroker(), pt)
               .withPeriodicPayment(defaultPeriodicPayment);
       Rate rate = new Rate().withValue(rateValue);
       if (pt.isInterruptible()) {
         // set max curtailment
-        rate.withMaxCurtailment(0.5);
+        rate.withMaxCurtailment(0.1);
       }
       spec.addRate(rate);
       customerSubscriptions.put(spec, new HashMap<CustomerInfo, CustomerRecord>());
