@@ -316,7 +316,7 @@ implements PortfolioManager, Initializable, Activatable
         rateValue = ((marketPrice + fixedPerKwh) * (1.0 + defaultMargin));
       else
         //rateValue = (-1.0 * marketPrice / (1.0 + defaultMargin));
-        rateValue = -1.0 * marketPrice;
+        rateValue = -2.0 * marketPrice;
       if (pt.isInterruptible())
         rateValue *= 0.7; // Magic number!! price break for interruptible
       TariffSpecification spec =
