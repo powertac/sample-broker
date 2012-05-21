@@ -84,6 +84,9 @@ implements BrokerContext
   private JmsManagementService jmsManagementService;
   
   @Autowired
+  private BrokerTournamentService brokerTournamentService;
+  
+  @Autowired
   private BrokerMessageReceiver brokerMessageReceiver;
 
   @Autowired
@@ -106,11 +109,18 @@ implements BrokerContext
   @ConfigurableValue(valueType = "String",
           description = "Broker login password")
   private String password = "password";
-  
-  @ConfigurableValue(valueType = "String",
-          description = "url for the JMS message broker")
-  private String jmsBrokerUrl = null;
 
+  @ConfigurableValue(valueType = "String",
+          description = "Name of tournament")
+  private String tourneyName = "";
+
+  @ConfigurableValue(valueType = "String",
+          description = "url for tournament login")
+  private String tourneyUrl = "";
+
+  @ConfigurableValue(valueType = "String",
+          description = "Authorization token for tournament")
+  private String authToken = "";
 
   // Broker keeps its own records
   private ArrayList<String> brokerNames;
@@ -119,6 +129,9 @@ implements BrokerContext
   private int timeslotCompleted = 0; // index of last completed timeslot
   private boolean running = false; // true to run, false to stop
   private BrokerAdapter adapter;
+  
+  // needed for backward compatibility
+  private String jmsBrokerUrl = null;
 
   /**
    * Default constructor for remote broker deployment
@@ -227,6 +240,16 @@ implements BrokerContext
    */
   public void run (String jmsBrokerUrl)
   {
+    // log into the tournament manager if tourneyUrl is non-empty
+    if (null != tourneyUrl && !tourneyUrl.isEmpty()) {
+      String newUrl = brokerTournamentService.login(tourneyName,
+                                                    tourneyUrl,
+                                                    authToken);
+      if (null != newUrl) {
+        this.jmsBrokerUrl = newUrl;
+      }
+    }
+    
     // wait for the JMS broker to show up and create our queue
     
     String brokerQueueName = generateQueueName();
