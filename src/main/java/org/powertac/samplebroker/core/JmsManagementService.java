@@ -13,19 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.powertac.samplebroker;
+package org.powertac.samplebroker.core;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
 import javax.annotation.Resource;
+import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
+import javax.jms.JMSException;
 import javax.jms.MessageListener;
+import javax.jms.Queue;
+import javax.jms.Session;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.broker.BrokerRegistry;
+import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.pool.PooledConnectionFactory;
 import org.apache.log4j.Logger;
+import org.powertac.common.Broker;
 import org.powertac.common.config.ConfigurableValue;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jms.listener.AbstractMessageListenerContainer;
@@ -56,20 +63,7 @@ public class JmsManagementService {
   private Map<MessageListener,AbstractMessageListenerContainer> listenerContainerMap = 
       new HashMap<MessageListener,AbstractMessageListenerContainer>();
   
-  public void registerMessageListener(String destinationName, MessageListener listener) {    
-    log.info("registerMessageListener(" + destinationName + ", " + listener + ")");
-    DefaultMessageListenerContainer container = new DefaultMessageListenerContainer();
-    container.setConnectionFactory(connectionFactory);
-    container.setDestinationName(destinationName);
-    container.setMessageListener(listener);
-    container.setTaskExecutor(taskExecutor);
-    container.afterPropertiesSet();
-    container.start();
-    
-    listenerContainerMap.put(listener, container);
-  }
-  
-  public void init (String overridenBrokerUrl)
+  public void init (String overridenBrokerUrl, String destinationName)
   {
     brokerPropertiesService.configureMe(this);
     if (overridenBrokerUrl != null && !overridenBrokerUrl.isEmpty()) {
@@ -84,6 +78,49 @@ public class JmsManagementService {
         amqConnectionFactory.setBrokerURL(getJmsBrokerUrl());
       }
     }
+    
+    // create the queue first
+    boolean success = false;
+    while (!success) {
+      try {
+        createQueue(destinationName);
+        success = true;
+      }
+      catch (JMSException e) {
+        log.info("JMS message broker not ready - delay and retry");
+        try {
+          Thread.sleep(2000);
+        }
+        catch (InterruptedException e1) {
+          // ignore exception
+        }
+      }
+    }
+  }
+  
+  public void registerMessageListener(MessageListener listener,
+                                      String destinationName)
+  {
+    log.info("registerMessageListener(" + destinationName + ", " + listener + ")");
+    DefaultMessageListenerContainer container = new DefaultMessageListenerContainer();
+    container.setConnectionFactory(connectionFactory);
+    container.setDestinationName(destinationName);
+    container.setMessageListener(listener);
+    container.setTaskExecutor(taskExecutor);
+    container.afterPropertiesSet();
+    container.start();
+    
+    listenerContainerMap.put(listener, container);
+  }
+  
+  public void createQueue (String queueName) throws JMSException
+  {
+    // now we can create the queue
+    Connection connection = connectionFactory.createConnection();
+    Session session = connection.createSession(false,
+                                               Session.AUTO_ACKNOWLEDGE);
+    session.createQueue(queueName);
+    log.info("JMS Queue " + queueName + " created");
   }
   
   public String getServerQueueName()

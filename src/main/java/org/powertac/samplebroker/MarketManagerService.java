@@ -34,6 +34,12 @@ import org.powertac.common.WeatherForecast;
 import org.powertac.common.WeatherReport;
 import org.powertac.common.msg.MarketBootstrapData;
 import org.powertac.common.repo.TimeslotRepo;
+import org.powertac.samplebroker.core.PowerTacBroker;
+import org.powertac.samplebroker.interfaces.Activatable;
+import org.powertac.samplebroker.interfaces.BrokerContext;
+import org.powertac.samplebroker.interfaces.Initializable;
+import org.powertac.samplebroker.interfaces.MarketManager;
+import org.powertac.samplebroker.interfaces.PortfolioManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -42,11 +48,12 @@ import org.springframework.stereotype.Service;
  * @author John Collins
  */
 @Service
-public class MarketManagerService implements MarketManager
+public class MarketManagerService 
+implements MarketManager, Initializable, Activatable
 {
   static private Logger log = Logger.getLogger(MarketManagerService.class);
   
-  private SampleBroker master; // master
+  private BrokerContext master; // master
   
   @Autowired
   private TimeslotRepo timeslotRepo;
@@ -76,12 +83,13 @@ public class MarketManagerService implements MarketManager
   {
     super();
   }
-  
+
   /* (non-Javadoc)
    * @see org.powertac.samplebroker.MarketManager#init(org.powertac.samplebroker.SampleBroker)
    */
+  @SuppressWarnings("unchecked")
   @Override
-  public void init (SampleBroker broker)
+  public void initialize (BrokerContext broker)
   {
     this.master = broker;
     lastOrder = new HashMap<Timeslot, Order>();
@@ -104,6 +112,7 @@ public class MarketManagerService implements MarketManager
   /**
    * Returns the mean price observed in the market
    */
+  @Override
   public double getMeanMarketPrice ()
   {
     return meanMarketPrice;
@@ -220,7 +229,7 @@ public class MarketManagerService implements MarketManager
    * @see org.powertac.samplebroker.MarketManager#activate()
    */
   @Override
-  public void activate ()
+  public void activate (int timeslotIndex)
   {
     double neededKWh = 0.0;
     log.debug("Current timeslot is " + timeslotRepo.currentTimeslot().getSerialNumber());

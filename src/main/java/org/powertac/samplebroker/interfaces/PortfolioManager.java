@@ -13,28 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.powertac.samplebroker;
+package org.powertac.samplebroker.interfaces;
 
 /**
- * Encapsulates broker market interactions.
+ * Interface for portfolio manager, makes usage statistics available.
  * @author John Collins
  */
-public interface MarketManager
+public interface PortfolioManager
 {
-
   /**
-   * Initializes data structures.
+   * Returns total net expected usage across all subscriptions for the given
+   * index (normally a timeslot serial number).
    */
-  public void init (SampleBroker broker);
-
-  /**
-   * Returns the mean price observed in the market
-   */
-  public double getMeanMarketPrice ();
-
-  /**
-   * Runs the per-timeslot activities to buy and sell energy.
-   */
-  public void activate ();
-
+  public double collectUsage (int index); 
 }

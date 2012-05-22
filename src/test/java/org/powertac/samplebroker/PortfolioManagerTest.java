@@ -32,6 +32,7 @@ import org.powertac.common.enumerations.PowerType;
 import org.powertac.common.msg.CustomerBootstrapData;
 import org.powertac.common.repo.CustomerRepo;
 import org.powertac.common.repo.TimeslotRepo;
+import org.powertac.samplebroker.core.PowerTacBroker;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /**
@@ -43,7 +44,7 @@ public class PortfolioManagerTest
   private CustomerRepo customerRepo;
   
   private PortfolioManagerService portfolioManagerService;
-  private SampleBroker broker;
+  private PowerTacBroker broker;
   private Instant baseTime;
 
   /**
@@ -52,16 +53,18 @@ public class PortfolioManagerTest
   @Before
   public void setUp () throws Exception
   {
-    broker = mock(SampleBroker.class);
+    broker = mock(PowerTacBroker.class);
     timeslotRepo = mock(TimeslotRepo.class);
     customerRepo = new CustomerRepo();
-    when(broker.getCustomerRepo()).thenReturn(customerRepo);
     when(broker.getUsageRecordLength()).thenReturn(7*24);
     portfolioManagerService = new PortfolioManagerService();
     ReflectionTestUtils.setField(portfolioManagerService,
                                  "timeslotRepo",
                                  timeslotRepo);
-    portfolioManagerService.init(broker);
+    ReflectionTestUtils.setField(portfolioManagerService,
+                                 "customerRepo",
+                                 customerRepo);
+    portfolioManagerService.initialize(broker);
 
     // set the time
     baseTime =

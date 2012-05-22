@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.powertac.samplebroker;
+package org.powertac.samplebroker.core;
 
 import static org.powertac.util.MessageDispatcher.dispatch;
 
@@ -57,6 +57,7 @@ public class MessageDispatcher
   private JmsManagementService jmsManagementService; 
 
   private HashMap<Class<?>, Set<Object>> registrations;
+  String key = ""; // server registration secret
 
   /**
    * Default constructor
@@ -65,6 +66,11 @@ public class MessageDispatcher
   {
     super();
     registrations = new HashMap<Class<?>, Set<Object>>();
+  }
+  
+  void setKey (String key)
+  {
+    this.key = key;
   }
 
   // ------------- incoming messages ----------------
@@ -87,7 +93,7 @@ public class MessageDispatcher
   public void routeMessage (Object message)
   {
     Class<?> clazz = message.getClass();
-    log.info("Route " + clazz.getName());
+    log.debug("Route " + clazz.getName());
     Set<Object> targets = registrations.get(clazz);
     if (targets == null) {
       log.warn("no targets for message of type " + clazz.getName());
@@ -104,7 +110,7 @@ public class MessageDispatcher
    */
   public void sendMessage(Object message)
   {
-    final String text = converter.toXML(message);
+    final String text = key + converter.toXML(message);
     log.info("sending text: \n" + text);
 
     template.send(jmsManagementService.getServerQueueName(),

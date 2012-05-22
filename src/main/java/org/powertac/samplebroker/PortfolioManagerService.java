@@ -26,15 +26,22 @@ import org.powertac.common.Broker;
 import org.powertac.common.Competition;
 import org.powertac.common.CustomerInfo;
 import org.powertac.common.Rate;
+import org.powertac.common.Tariff;
 import org.powertac.common.TariffSpecification;
 import org.powertac.common.TariffTransaction;
 import org.powertac.common.TimeService;
 import org.powertac.common.enumerations.PowerType;
+import org.powertac.common.msg.BalancingOrder;
 import org.powertac.common.msg.CustomerBootstrapData;
 import org.powertac.common.msg.TariffStatus;
 import org.powertac.common.repo.CustomerRepo;
 import org.powertac.common.repo.TariffRepo;
 import org.powertac.common.repo.TimeslotRepo;
+import org.powertac.samplebroker.interfaces.Activatable;
+import org.powertac.samplebroker.interfaces.BrokerContext;
+import org.powertac.samplebroker.interfaces.Initializable;
+import org.powertac.samplebroker.interfaces.MarketManager;
+import org.powertac.samplebroker.interfaces.PortfolioManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -44,17 +51,21 @@ import org.springframework.stereotype.Service;
  * @author John Collins
  */
 @Service
-public class PortfolioManagerService implements PortfolioManager
+public class PortfolioManagerService 
+implements PortfolioManager, Initializable, Activatable
 {
   static private Logger log = Logger.getLogger(PortfolioManagerService.class);
   
-  private SampleBroker broker; // master
+  private BrokerContext broker; // master
   
   @Autowired
   private TimeslotRepo timeslotRepo;
   
   @Autowired
   private TariffRepo tariffRepo;
+  
+  @Autowired
+  private CustomerRepo customerRepo;
   
   @Autowired
   private MarketManager marketManager;
@@ -89,8 +100,9 @@ public class PortfolioManagerService implements PortfolioManager
   /**
    * Sets up message handling
    */
+  @Override
   @SuppressWarnings("unchecked")
-  public void init (SampleBroker broker)
+  public void initialize (BrokerContext broker)
   {
     this.broker = broker;
     customerProfiles = new HashMap<PowerType,
@@ -107,10 +119,6 @@ public class PortfolioManagerService implements PortfolioManager
   }
   
   // -------------- data access ------------------
-  private CustomerRepo getCustomerRepo ()
-  {
-    return broker.getCustomerRepo();
-  }
   
   /**
    * Returns the CustomerRecord for the given type and customer, creating it
@@ -201,7 +209,9 @@ public class PortfolioManagerService implements PortfolioManager
    */
   public void handleMessage (CustomerBootstrapData cbd)
   {
-    CustomerInfo customer = getCustomerRepo().findByName(cbd.getCustomerName());
+    CustomerInfo customer =
+            customerRepo.findByNameAndPowerType(cbd.getCustomerName(),
+                                                cbd.getPowerType());
     CustomerRecord record = getCustomerRecordByPowerType(cbd.getPowerType(), customer);
     int offset = (timeslotRepo.currentTimeslot().getSerialNumber()
                   - cbd.getNetUsage().length);
@@ -279,7 +289,7 @@ public class PortfolioManagerService implements PortfolioManager
    * @see org.powertac.samplebroker.PortfolioManager#activate()
    */
   @Override
-  public void activate ()
+  public void activate (int timeslotIndex)
   {
     if (customerSubscriptions.size() == 0) {
       // we have no tariffs
@@ -305,11 +315,19 @@ public class PortfolioManagerService implements PortfolioManager
       if (pt.isConsumption())
         rateValue = ((marketPrice + fixedPerKwh) * (1.0 + defaultMargin));
       else
-        rateValue = (-1.0 * marketPrice / (1.0 + defaultMargin));
+        //rateValue = (-1.0 * marketPrice / (1.0 + defaultMargin));
+        rateValue = -1.0 * marketPrice;
+      if (pt.isInterruptible())
+        rateValue *= 0.7; // Magic number!! price break for interruptible
       TariffSpecification spec =
           new TariffSpecification(broker.getBroker(), pt)
-        .withPeriodicPayment(defaultPeriodicPayment)
-        .addRate(new Rate().withValue(rateValue));
+              .withPeriodicPayment(defaultPeriodicPayment);
+      Rate rate = new Rate().withValue(rateValue);
+      if (pt.isInterruptible()) {
+        // set max curtailment
+        rate.withMaxCurtailment(0.1);
+      }
+      spec.addRate(rate);
       customerSubscriptions.put(spec, new HashMap<CustomerInfo, CustomerRecord>());
       tariffRepo.addSpecification(spec);
       broker.sendMessage(spec);
@@ -319,7 +337,19 @@ public class PortfolioManagerService implements PortfolioManager
   // Checks to see whether our tariffs need fine-tuning
   private void improveTariffs()
   {
-    
+    // quick magic-number hack to inject a balancing order
+    int timeslotIndex = timeslotRepo.currentTimeslot().getSerialNumber();
+    if (371 == timeslotIndex) {
+      for (TariffSpecification spec : tariffRepo.findAllTariffSpecifications()) {
+        if (PowerType.INTERRUPTIBLE_CONSUMPTION == spec.getPowerType()) {
+          BalancingOrder order = new BalancingOrder(broker.getBroker(),
+                                                    spec, 
+                                                    0.5,
+                                                    spec.getRates().get(0).getMinValue() * 0.9);
+          broker.sendMessage(order);
+        }
+      }
+    }
   }
 
   // ------------- test-support methods ----------------

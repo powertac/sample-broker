@@ -1,4 +1,4 @@
-package org.powertac.samplebroker;
+package org.powertac.samplebroker.core;
 
 import static org.junit.Assert.*;
 
@@ -7,6 +7,7 @@ import java.util.Set;
 import org.junit.Before;
 import org.junit.Test;
 import org.powertac.common.msg.BrokerAccept;
+import org.powertac.samplebroker.core.MessageDispatcher;
 
 public class MessageDispatcherTest
 {
