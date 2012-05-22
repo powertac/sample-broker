@@ -48,11 +48,11 @@ public class BrokerTournamentService
   // Configurable parameters
   private String authToken = null;
   private String tourneyName = null;
-  private String responseType = null;
+  private String responseType = "xml";
   //private String username = null;
 
   // If set to negative number infinite retries
-  private int maxTry = 1;
+  private int maxTry = 5;
 
   public void init()
   {
@@ -162,6 +162,8 @@ public class BrokerTournamentService
           return true;
         }
         else if (doneNode != null) {
+          System.out.println("Recieved Done Message no more games!");
+          maxTry=0;
           return false;
         }
         else {
