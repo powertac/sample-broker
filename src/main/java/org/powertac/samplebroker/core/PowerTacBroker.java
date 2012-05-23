@@ -157,7 +157,7 @@ implements BrokerContext
     
     // Initialize and run.
     init(username);
-    run(jmsBrokerUrl);
+    run();
   }
 
   private void processOldCmdLine (String[] args)
@@ -238,7 +238,7 @@ implements BrokerContext
   /**
    * Logs in and waits for the sim to end.
    */
-  public void run (String jmsBrokerUrl)
+  public void run ()
   {
     // log into the tournament manager if tourneyUrl is non-empty
     if (null != tourneyUrl && !tourneyUrl.isEmpty()) {
@@ -246,7 +246,7 @@ implements BrokerContext
                                                     tourneyUrl,
                                                     authToken);
       if (null != newUrl) {
-        this.jmsBrokerUrl = newUrl;
+        jmsBrokerUrl = newUrl;
       }
     }
     
