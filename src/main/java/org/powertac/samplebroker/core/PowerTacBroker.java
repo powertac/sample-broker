@@ -255,7 +255,7 @@ implements BrokerContext
     String brokerQueueName = generateQueueName();
     adapter.setQueueName(brokerQueueName);
     // if null, assume local broker without jms connectivity
-    jmsManagementService.init(jmsBrokerUrl, brokerQueueName);
+    jmsManagementService.init(this.jmsBrokerUrl, brokerQueueName);
     jmsManagementService.registerMessageListener(brokerMessageReceiver,
                                                  brokerQueueName);
     
