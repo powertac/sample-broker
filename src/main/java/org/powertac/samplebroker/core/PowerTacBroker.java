@@ -215,11 +215,13 @@ implements BrokerContext
     
     // Log in to server.
     // In case the server does not respond within  second
+    BrokerAuthentication auth =
+            new BrokerAuthentication(username, password,
+                                     adapter.toQueueName());
     synchronized(this) {
       while (!adapter.isEnabled()) {
         try {
-          sendMessage(new BrokerAuthentication(username, password,
-                                               adapter.toQueueName()));
+          sendMessage(auth);
           wait(loginRetryTimeout);
         }
         catch (InterruptedException e) {
@@ -247,6 +249,7 @@ implements BrokerContext
     catch (InterruptedException ie) {
       log.warn("Interrupted!");
     }
+    jmsManagementService.shutdown();
   }
 
   private String generateQueueName ()

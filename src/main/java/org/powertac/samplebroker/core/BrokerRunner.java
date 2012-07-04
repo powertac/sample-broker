@@ -101,6 +101,7 @@ public class BrokerRunner
           context = new ClassPathXmlApplicationContext("broker.xml");
         }
         else {
+          context.close();
           context.refresh();
         }
         // get the broker reference and delegate the rest

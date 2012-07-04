@@ -58,7 +58,13 @@ public class JmsManagementService {
   
   // configurable parameters
   private String serverQueueName = "serverInput"; 
-  private String jmsBrokerUrl = "tcp://localhost:61616";  
+  private String jmsBrokerUrl = "tcp://localhost:61616";
+  
+  // JMS artifacts
+  Connection connection;
+  boolean connectionOpen = false;
+  DefaultMessageListenerContainer container;
+  Session session;
 
   private Map<MessageListener,AbstractMessageListenerContainer> listenerContainerMap = 
       new HashMap<MessageListener,AbstractMessageListenerContainer>();
@@ -102,7 +108,7 @@ public class JmsManagementService {
                                       String destinationName)
   {
     log.info("registerMessageListener(" + destinationName + ", " + listener + ")");
-    DefaultMessageListenerContainer container = new DefaultMessageListenerContainer();
+    container = new DefaultMessageListenerContainer();
     container.setConnectionFactory(connectionFactory);
     container.setDestinationName(destinationName);
     container.setMessageListener(listener);
@@ -112,15 +118,50 @@ public class JmsManagementService {
     
     listenerContainerMap.put(listener, container);
   }
-  
+
   public void createQueue (String queueName) throws JMSException
   {
     // now we can create the queue
-    Connection connection = connectionFactory.createConnection();
-    Session session = connection.createSession(false,
-                                               Session.AUTO_ACKNOWLEDGE);
+    connection = connectionFactory.createConnection();
+    connectionOpen = true;
+    session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
     session.createQueue(queueName);
+    session.close();
     log.info("JMS Queue " + queueName + " created");
+  }
+
+  public synchronized void shutdown ()
+  {
+    Runnable callback = new Runnable() {
+      @Override
+      public void run ()
+      {
+        closeConnection();
+      }
+    };
+    container.stop(callback);
+    
+    while (connectionOpen) {
+      try {
+        wait();
+      }
+      catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+  }
+
+  private synchronized void closeConnection ()
+  {
+    try {
+      //session.close();
+      connection.close();
+      connectionOpen = false;
+      notifyAll();
+    }
+    catch (JMSException e) {
+      e.printStackTrace();
+    }
   }
   
   public String getServerQueueName()
