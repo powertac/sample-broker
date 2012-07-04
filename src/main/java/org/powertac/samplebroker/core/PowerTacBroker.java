@@ -125,6 +125,7 @@ implements BrokerContext
   // Broker keeps its own records
   private ArrayList<String> brokerNames;
   private Instant baseTime = null;
+  private long quittingTime = 0l;
   private int currentTimeslot = 0; // index of last started timeslot
   private int timeslotCompleted = 0; // index of last completed timeslot
   private boolean running = false; // true to run, false to stop
@@ -141,66 +142,19 @@ implements BrokerContext
     super();
   }
   
-  /**
-   * Processes the command line arguments.
-   */
-  public void processCmdLine (String[] args)
+  public void startSession (File configFile, String jmsUrl, long end)
   {
-    if (args.length <= 2 && args.length > 0 && !args[0].startsWith("-")) {
-      // old-style command line has username and jms url
-      processOldCmdLine(args);
-    }
-    else {
-      // new-style cmd line
-      processCli(args);
-    }
+    quittingTime = end;
+    if (null != configFile && configFile.canRead())
+      propertiesService.setUserConfig(configFile);
+    if (null != jmsUrl)
+      propertiesService.setProperty("samplebroker.core.jmsManagementService.jmsBrokerUrl",
+                                      jmsUrl);
+    propertiesService.configureMe(this);
     
     // Initialize and run.
-    init(username);
+    init();
     run();
-  }
-
-  private void processOldCmdLine (String[] args)
-  {
-    // config first, then allow override
-    propertiesService.configureMe(this);
-    
-    // Get username from command-line.
-
-    username = args[0];
-    if (args.length == 2) {
-      jmsBrokerUrl = args[1];
-    }
-  }
-  
-  private void processCli (String[] args)
-  {
-    OptionParser parser = new OptionParser();
-    OptionSpec<String> jmsUrlOption =
-            parser.accepts("jms-url").withRequiredArg().ofType(String.class);
-    OptionSpec<File> configOption = 
-            parser.accepts("config").withRequiredArg().ofType(File.class);
-    
-    // do the parse
-    OptionSet options = parser.parse(args);
-    
-    try {
-      // process broker options
-      if (options.has(configOption)) {
-        // set up config before trying to override values
-        File configFile = options.valueOf(configOption);
-        if (configFile.canRead()) {
-          propertiesService.setUserConfig(configFile);
-        }
-      }
-      if (options.has(jmsUrlOption))
-        propertiesService.setProperty("samplebroker.core.jmsManagementService.jmsBrokerUrl",
-                                      options.valueOf(jmsUrlOption));
-    }
-    catch (OptionException e) {
-      System.err.println("Bad command argument: " + e.toString());
-    }
-    propertiesService.configureMe(this);
   }
 
   /**
@@ -208,7 +162,7 @@ implements BrokerContext
    * for incoming messages.
    */
   @SuppressWarnings("unchecked")
-  public void init (String username)
+  public void init ()
   {
     adapter = new BrokerAdapter(username);
 
