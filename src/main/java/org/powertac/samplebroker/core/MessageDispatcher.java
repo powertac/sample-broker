@@ -57,7 +57,7 @@ public class MessageDispatcher
   private JmsManagementService jmsManagementService; 
 
   private HashMap<Class<?>, Set<Object>> registrations;
-  String key = ""; // server registration secret
+  //String key = ""; // server registration secret
 
   /**
    * Default constructor
@@ -68,10 +68,10 @@ public class MessageDispatcher
     registrations = new HashMap<Class<?>, Set<Object>>();
   }
   
-  void setKey (String key)
-  {
-    this.key = key;
-  }
+//  void setKey (String key)
+//  {
+//    this.key = key;
+//  }
 
   // ------------- incoming messages ----------------
   /**
@@ -110,7 +110,7 @@ public class MessageDispatcher
    */
   public void sendMessage(Object message)
   {
-    final String text = key + converter.toXML(message);
+    final String text = converter.toXML(message);
     log.info("sending text: \n" + text);
 
     template.send(jmsManagementService.getServerQueueName(),

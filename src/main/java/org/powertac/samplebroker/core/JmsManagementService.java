@@ -24,15 +24,11 @@ import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
 import javax.jms.JMSException;
 import javax.jms.MessageListener;
-import javax.jms.Queue;
 import javax.jms.Session;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.broker.BrokerRegistry;
-import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.pool.PooledConnectionFactory;
 import org.apache.log4j.Logger;
-import org.powertac.common.Broker;
 import org.powertac.common.config.ConfigurableValue;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jms.listener.AbstractMessageListenerContainer;
@@ -69,9 +65,11 @@ public class JmsManagementService {
   private Map<MessageListener,AbstractMessageListenerContainer> listenerContainerMap = 
       new HashMap<MessageListener,AbstractMessageListenerContainer>();
   
-  public void init (String overridenBrokerUrl, String destinationName)
+  public void init (String overridenBrokerUrl,
+                    String serverQueueName)
   {
     brokerPropertiesService.configureMe(this);
+    this.serverQueueName = serverQueueName; 
     if (overridenBrokerUrl != null && !overridenBrokerUrl.isEmpty()) {
       setJmsBrokerUrl(overridenBrokerUrl);
     }
@@ -86,22 +84,22 @@ public class JmsManagementService {
     }
     
     // create the queue first
-    boolean success = false;
-    while (!success) {
-      try {
-        createQueue(destinationName);
-        success = true;
-      }
-      catch (JMSException e) {
-        log.info("JMS message broker not ready - delay and retry");
-        try {
-          Thread.sleep(2000);
-        }
-        catch (InterruptedException e1) {
-          // ignore exception
-        }
-      }
-    }
+//    boolean success = false;
+//    while (!success) {
+//      try {
+//        createQueue(destinationName);
+//        success = true;
+//      }
+//      catch (JMSException e) {
+//        log.info("JMS message broker not ready - delay and retry");
+//        try {
+//          Thread.sleep(2000);
+//        }
+//        catch (InterruptedException e1) {
+//          // ignore exception
+//        }
+//      }
+//    }
   }
   
   public void registerMessageListener(MessageListener listener,
@@ -119,16 +117,16 @@ public class JmsManagementService {
     listenerContainerMap.put(listener, container);
   }
 
-  public void createQueue (String queueName) throws JMSException
-  {
-    // now we can create the queue
-    connection = connectionFactory.createConnection();
-    connectionOpen = true;
-    session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-    session.createQueue(queueName);
-    session.close();
-    log.info("JMS Queue " + queueName + " created");
-  }
+//  public void createQueue (String queueName) throws JMSException
+//  {
+//    // now we can create the queue
+//    connection = connectionFactory.createConnection();
+//    connectionOpen = true;
+//    session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+//    session.createQueue(queueName);
+//    session.close();
+//    log.info("JMS Queue " + queueName + " created");
+//  }
 
   public synchronized void shutdown ()
   {
@@ -153,15 +151,10 @@ public class JmsManagementService {
 
   private synchronized void closeConnection ()
   {
-    try {
-      //session.close();
-      connection.close();
-      connectionOpen = false;
-      notifyAll();
-    }
-    catch (JMSException e) {
-      e.printStackTrace();
-    }
+    //session.close();
+    //connection.close();
+    connectionOpen = false;
+    notifyAll();
   }
   
   public String getServerQueueName()

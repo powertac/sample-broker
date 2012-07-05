@@ -16,17 +16,9 @@
 package org.powertac.samplebroker.core;
 
 import java.io.File;
-import java.io.IOException;
-import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
-
-import joptsimple.OptionException;
-import joptsimple.OptionParser;
-import joptsimple.OptionSet;
-import joptsimple.OptionSpec;
 
 import org.apache.log4j.Logger;
 import org.joda.time.Instant;
@@ -130,6 +122,8 @@ implements BrokerContext
   private int timeslotCompleted = 0; // index of last completed timeslot
   private boolean running = false; // true to run, false to stop
   private BrokerAdapter adapter;
+  private String serverQueueName = "serverInput";
+  private String brokerQueueName; // set by tournament manager
   
   // needed for backward compatibility
   private String jmsBrokerUrl = null;
@@ -194,22 +188,23 @@ implements BrokerContext
    */
   public void run ()
   {
+    brokerQueueName = username;
     // log into the tournament manager if tourneyUrl is non-empty
-    if (null != tourneyUrl && !tourneyUrl.isEmpty()) {
-      String newUrl = brokerTournamentService.login(tourneyName,
-                                                    tourneyUrl,
-                                                    authToken);
-      if (null != newUrl) {
-        jmsBrokerUrl = newUrl;
-      }
+    if (null != tourneyUrl && !tourneyUrl.isEmpty() &&
+            brokerTournamentService.login(tourneyName,
+                                          tourneyUrl,
+                                          authToken,
+                                          quittingTime)) {
+        jmsBrokerUrl = brokerTournamentService.getJmsUrl();
+        serverQueueName = brokerTournamentService.getServerQueueName();
+        brokerQueueName = brokerTournamentService.getBrokerQueueName();
     }
     
     // wait for the JMS broker to show up and create our queue
     
-    String brokerQueueName = generateQueueName();
     adapter.setQueueName(brokerQueueName);
     // if null, assume local broker without jms connectivity
-    jmsManagementService.init(jmsBrokerUrl, brokerQueueName);
+    jmsManagementService.init(jmsBrokerUrl, serverQueueName);
     jmsManagementService.registerMessageListener(brokerMessageReceiver,
                                                  brokerQueueName);
     
@@ -252,12 +247,12 @@ implements BrokerContext
     jmsManagementService.shutdown();
   }
 
-  private String generateQueueName ()
-  {
-    long time = new Date().getTime() & 0xffffffff;
-    long ran = (long)(time * (Math.random() + 0.5));
-    return adapter.getUsername() + "." + Long.toString(ran, 31);
-  }
+//  private String generateQueueName ()
+//  {
+//    long time = new Date().getTime() & 0xffffffff;
+//    long ran = (long)(time * (Math.random() + 0.5));
+//    return adapter.getUsername() + "." + Long.toString(ran, 31);
+//  }
   
   // ------------- Accessors ----------------
 //  /**
@@ -369,8 +364,8 @@ implements BrokerContext
   {
     adapter.setEnabled(true);
     IdGenerator.setPrefix(accept.getPrefix());
-    adapter.setKey(accept.getKey());
-    router.setKey(accept.getKey());
+    //adapter.setKey(accept.getKey());
+    //router.setKey(accept.getKey());
     notifyAll();
   }
   
