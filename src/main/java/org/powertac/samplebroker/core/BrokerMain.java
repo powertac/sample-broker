@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 the original author or authors.
+ * Copyright 2011, 2012 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,12 +32,8 @@ public class BrokerMain
    */
   public static void main (String[] args)
   {
-    AbstractApplicationContext context = new ClassPathXmlApplicationContext("broker.xml");
-    context.registerShutdownHook();
-    // get the broker reference and delegate the rest
-    PowerTacBroker broker =
-            (PowerTacBroker)context.getBeansOfType(PowerTacBroker.class).values().toArray()[0];
-    broker.processCmdLine(args);
+    BrokerRunner runner = new BrokerRunner();
+    runner.processCmdLine(args);
     
     // if we get here, it's time to exit
     System.exit(0);
