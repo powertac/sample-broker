@@ -24,15 +24,11 @@ import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
 import javax.jms.JMSException;
 import javax.jms.MessageListener;
-import javax.jms.Queue;
 import javax.jms.Session;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
-import org.apache.activemq.broker.BrokerRegistry;
-import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.pool.PooledConnectionFactory;
 import org.apache.log4j.Logger;
-import org.powertac.common.Broker;
 import org.powertac.common.config.ConfigurableValue;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jms.listener.AbstractMessageListenerContainer;
