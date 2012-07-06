@@ -211,8 +211,7 @@ implements BrokerContext
     // Log in to server.
     // In case the server does not respond within  second
     BrokerAuthentication auth =
-            new BrokerAuthentication(username, password,
-                                     adapter.toQueueName());
+            new BrokerAuthentication(username, password);
     synchronized(this) {
       while (!adapter.isEnabled()) {
         try {

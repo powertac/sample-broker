@@ -22,7 +22,6 @@ import java.util.concurrent.Executor;
 import javax.annotation.Resource;
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
-import javax.jms.JMSException;
 import javax.jms.MessageListener;
 import javax.jms.Session;
 
@@ -82,24 +81,6 @@ public class JmsManagementService {
         amqConnectionFactory.setBrokerURL(getJmsBrokerUrl());
       }
     }
-    
-    // create the queue first
-//    boolean success = false;
-//    while (!success) {
-//      try {
-//        createQueue(destinationName);
-//        success = true;
-//      }
-//      catch (JMSException e) {
-//        log.info("JMS message broker not ready - delay and retry");
-//        try {
-//          Thread.sleep(2000);
-//        }
-//        catch (InterruptedException e1) {
-//          // ignore exception
-//        }
-//      }
-//    }
   }
   
   public void registerMessageListener(MessageListener listener,
@@ -116,17 +97,6 @@ public class JmsManagementService {
     
     listenerContainerMap.put(listener, container);
   }
-
-//  public void createQueue (String queueName) throws JMSException
-//  {
-//    // now we can create the queue
-//    connection = connectionFactory.createConnection();
-//    connectionOpen = true;
-//    session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-//    session.createQueue(queueName);
-//    session.close();
-//    log.info("JMS Queue " + queueName + " created");
-//  }
 
   public synchronized void shutdown ()
   {
