@@ -363,8 +363,8 @@ implements BrokerContext
   {
     adapter.setEnabled(true);
     IdGenerator.setPrefix(accept.getPrefix());
-    //adapter.setKey(accept.getKey());
-    //router.setKey(accept.getKey());
+    adapter.setKey(accept.getKey());
+    router.setKey(accept.getKey());
     notifyAll();
   }
   
