@@ -123,7 +123,7 @@ implements BrokerContext
   private boolean running = false; // true to run, false to stop
   private BrokerAdapter adapter;
   private String serverQueueName = "serverInput";
-  private String brokerQueueName; // set by tournament manager
+  private String brokerQueueName = null; // set by tournament manager
   
   // needed for backward compatibility
   private String jmsBrokerUrl = null;
@@ -135,10 +135,15 @@ implements BrokerContext
   {
     super();
   }
-  
-  public void startSession (File configFile, String jmsUrl, long end)
+
+  /**
+   * Starts a new session
+   */
+  public void startSession (File configFile, String jmsUrl,
+                            String queueName, long end)
   {
     quittingTime = end;
+    brokerQueueName = queueName;
     if (null != configFile && configFile.canRead())
       propertiesService.setUserConfig(configFile);
     if (null != jmsUrl)
@@ -188,7 +193,8 @@ implements BrokerContext
    */
   public void run ()
   {
-    brokerQueueName = username;
+    if (null == brokerQueueName)
+      brokerQueueName = username;
     // log into the tournament manager if tourneyUrl is non-empty
     if (null != tourneyUrl && !tourneyUrl.isEmpty() &&
             brokerTournamentService.login(tourneyName,
@@ -207,6 +213,7 @@ implements BrokerContext
     jmsManagementService.init(jmsBrokerUrl, serverQueueName);
     jmsManagementService.registerMessageListener(brokerMessageReceiver,
                                                  brokerQueueName);
+    log.info("Listening on queue " + brokerQueueName);
     
     // Log in to server.
     // In case the server does not respond within  second
