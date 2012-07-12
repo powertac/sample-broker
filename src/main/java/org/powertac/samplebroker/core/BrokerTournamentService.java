@@ -38,7 +38,7 @@ import org.w3c.dom.Node;
 @Service
 public class BrokerTournamentService
 {
-  static private Logger log = Logger.getLogger(BrokerMessageReceiver.class);
+  static private Logger log = Logger.getLogger(BrokerTournamentService.class);
 
   @Autowired
   private BrokerPropertiesService brokerPropertiesService;
@@ -80,16 +80,6 @@ public class BrokerTournamentService
   public String getJmsUrl ()
   {
     return jmsUrl;
-  }
-
-  public String getGameToken()
-  {
-    return gameToken;
-  }
-
-  public void setGameToken(String gameToken)
-  {
-    this.gameToken = gameToken;
   }
   
   public String getServerQueueName ()
@@ -165,19 +155,11 @@ public class BrokerTournamentService
           jmsUrl = checkJmsUrl;
           log.info("jmsUrl=" + checkJmsUrl);
 
-          String checkToken = doc.getElementsByTagName("gameToken").item(0).getFirstChild().getNodeValue();
-          gameToken = checkToken;
-          log.info("gameToken=" + checkToken);
-
-          String checkServerQueue = doc.getElementsByTagName("serverQueueName").item(0).getFirstChild().getNodeValue();
-          serverQueueName = checkServerQueue;
-          log.info("serverQueueName=" + checkServerQueue);
-
-          String checkBrokerQueue = doc.getElementsByTagName("brokerQueueName").item(0).getFirstChild().getNodeValue();
+          String checkBrokerQueue = doc.getElementsByTagName("queueName").item(0).getFirstChild().getNodeValue();
           brokerQueueName = checkBrokerQueue;
           log.info("brokerQueueName=" + checkBrokerQueue);
 
-          System.out.printf("Login message receieved!\njmsUrl=%s\ngameToken=%s\n",checkJmsUrl,checkToken);
+          System.out.printf("Login message receieved!\n  jmsUrl=%s\n  queueName=%s\n",checkJmsUrl,checkBrokerQueue);
           return true;
         }
         else if (doneNode != null) {

@@ -202,7 +202,7 @@ implements BrokerContext
                                           authToken,
                                           quittingTime)) {
         jmsBrokerUrl = brokerTournamentService.getJmsUrl();
-        serverQueueName = brokerTournamentService.getServerQueueName();
+        //serverQueueName = brokerTournamentService.getServerQueueName();
         brokerQueueName = brokerTournamentService.getBrokerQueueName();
     }
     
