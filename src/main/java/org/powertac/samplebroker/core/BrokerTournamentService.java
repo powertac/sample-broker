@@ -44,7 +44,7 @@ public class BrokerTournamentService
   private BrokerPropertiesService brokerPropertiesService;
 
   // The game specific token is only valid for one game
-  private String gameToken = null;
+  //private String gameToken = null;
   private String jmsUrl = null;
   private String brokerQueueName = null;
   private String serverQueueName = null;
@@ -60,7 +60,7 @@ public class BrokerTournamentService
   // If set to negative number infinite retries
   @ConfigurableValue(valueType = "Integer",
           description = "Maximum number of tries to connect to Tournament Scheduler")
-  private int maxTry = 5;
+  private int maxTry = 50;
 
   public void init()
   {
@@ -159,6 +159,10 @@ public class BrokerTournamentService
           brokerQueueName = checkBrokerQueue;
           log.info("brokerQueueName=" + checkBrokerQueue);
 
+          String checkServerQueue = doc.getElementsByTagName("serverQueue").item(0).getFirstChild().getNodeValue();
+          serverQueueName = checkServerQueue;
+          log.info("serverQueueName=" + checkServerQueue);
+
           System.out.printf("Login message receieved!\n  jmsUrl=%s\n  queueName=%s\n",checkJmsUrl,checkBrokerQueue);
           return true;
         }
@@ -194,7 +198,7 @@ public class BrokerTournamentService
       log.fatal(e.getMessage());
       // Sleep and wait for network
       try {
-        Thread.sleep(2000);
+        Thread.sleep(20000);
       }
       catch (InterruptedException e1) {
         e1.printStackTrace();
@@ -218,7 +222,7 @@ public class BrokerTournamentService
               (quittingTime == 0l || new Date().getTime() < quittingTime)) {
         System.out.println("Connecting to TS...");
         if (loginMaybe(tsUrl)) {
-          log.info("Login Successful! Game token: " + this.gameToken);
+          log.info("Login Successful!");
           return true;
         }
       }

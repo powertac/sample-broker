@@ -140,10 +140,13 @@ implements BrokerContext
    * Starts a new session
    */
   public void startSession (File configFile, String jmsUrl,
-                            String queueName, long end)
+                            String queueName, String serverQueue, long end)
   {
     quittingTime = end;
-    brokerQueueName = queueName;
+    if (null != queueName && !queueName.isEmpty())
+      brokerQueueName = queueName;
+    if (null != serverQueue&& !serverQueue.isEmpty())
+      serverQueueName = serverQueue;
     if (null != configFile && configFile.canRead())
       propertiesService.setUserConfig(configFile);
     if (null != jmsUrl)
@@ -204,6 +207,7 @@ implements BrokerContext
         jmsBrokerUrl = brokerTournamentService.getJmsUrl();
         //serverQueueName = brokerTournamentService.getServerQueueName();
         brokerQueueName = brokerTournamentService.getBrokerQueueName();
+        serverQueueName = brokerTournamentService.getServerQueueName();
     }
     
     // wait for the JMS broker to show up and create our queue
@@ -252,22 +256,8 @@ implements BrokerContext
     }
     jmsManagementService.shutdown();
   }
-
-//  private String generateQueueName ()
-//  {
-//    long time = new Date().getTime() & 0xffffffff;
-//    long ran = (long)(time * (Math.random() + 0.5));
-//    return adapter.getUsername() + "." + Long.toString(ran, 31);
-//  }
   
   // ------------- Accessors ----------------
-//  /**
-//   * Returns the message router
-//   */
-//  public MessageDispatcher getRouter ()
-//  {
-//    return router;
-//  }
   
   /**
    * Returns the "real" broker underneath this monstrosity
@@ -286,14 +276,6 @@ implements BrokerContext
   {
     return adapter.getUsername();
   }
-  
-//  /**
-//   * Returns the customerRepo. Cannot be called until after initialization.
-//   */
-//  public CustomerRepo getCustomerRepo ()
-//  {
-//    return customerRepo;
-//  }
 
   /**
    * Returns the simulation base time

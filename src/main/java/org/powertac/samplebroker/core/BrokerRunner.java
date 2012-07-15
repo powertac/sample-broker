@@ -58,6 +58,8 @@ public class BrokerRunner
             parser.accepts("repeat-hours").withRequiredArg().ofType(Integer.class);
     OptionSpec<String> queueNameOption =
             parser.accepts("queue-name").withRequiredArg().ofType(String.class);
+    OptionSpec<String> serverQueueOption =
+            parser.accepts("server-queue").withRequiredArg().ofType(String.class);
 
     // do the parse
     OptionSet options = parser.parse(args);
@@ -65,6 +67,7 @@ public class BrokerRunner
     File configFile = null;
     String jmsUrl = null;
     String queueName = null;
+    String serverQueue = null;
     Integer repeatCount = 1;
     long end = 0l;
     
@@ -93,6 +96,10 @@ public class BrokerRunner
         queueName = options.valueOf(queueNameOption);
         System.out.println("  queue-name=" + queueName);
       }
+      if (options.has(serverQueueOption)) {
+        serverQueue = options.valueOf(serverQueueOption);
+        System.out.println("  server-queue=" + serverQueue);
+      }
       
       // at this point, we are either done, or we need to repeat
       int counter = 0;
@@ -115,7 +122,7 @@ public class BrokerRunner
         context.registerShutdownHook();
         broker = (PowerTacBroker)context.getBeansOfType(PowerTacBroker.class).values().toArray()[0];
         System.out.println("Starting session " + counter);
-        broker.startSession(configFile, jmsUrl, queueName, end);
+        broker.startSession(configFile, jmsUrl, queueName, serverQueue, end);
         if (null != repeatCount)
           repeatCount -= 1;
       }
