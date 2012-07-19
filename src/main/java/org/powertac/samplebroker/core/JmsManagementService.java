@@ -22,7 +22,6 @@ import java.util.concurrent.Executor;
 import javax.annotation.Resource;
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
-import javax.jms.JMSException;
 import javax.jms.MessageListener;
 import javax.jms.Session;
 
@@ -65,9 +64,11 @@ public class JmsManagementService {
   private Map<MessageListener,AbstractMessageListenerContainer> listenerContainerMap = 
       new HashMap<MessageListener,AbstractMessageListenerContainer>();
   
-  public void init (String overridenBrokerUrl, String destinationName)
+  public void init (String overridenBrokerUrl,
+                    String serverQueueName)
   {
     brokerPropertiesService.configureMe(this);
+    this.serverQueueName = serverQueueName; 
     if (overridenBrokerUrl != null && !overridenBrokerUrl.isEmpty()) {
       setJmsBrokerUrl(overridenBrokerUrl);
     }
@@ -78,24 +79,6 @@ public class JmsManagementService {
         ActiveMQConnectionFactory amqConnectionFactory = (ActiveMQConnectionFactory) pooledConnectionFactory
                 .getConnectionFactory();
         amqConnectionFactory.setBrokerURL(getJmsBrokerUrl());
-      }
-    }
-    
-    // create the queue first
-    boolean success = false;
-    while (!success) {
-      try {
-        createQueue(destinationName);
-        success = true;
-      }
-      catch (JMSException e) {
-        log.info("JMS message broker not ready - delay and retry");
-        try {
-          Thread.sleep(2000);
-        }
-        catch (InterruptedException e1) {
-          // ignore exception
-        }
       }
     }
   }
@@ -113,17 +96,6 @@ public class JmsManagementService {
     container.start();
     
     listenerContainerMap.put(listener, container);
-  }
-
-  public void createQueue (String queueName) throws JMSException
-  {
-    // now we can create the queue
-    connection = connectionFactory.createConnection();
-    connectionOpen = true;
-    session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-    session.createQueue(queueName);
-    session.close();
-    log.info("JMS Queue " + queueName + " created");
   }
 
   public synchronized void shutdown ()
@@ -149,15 +121,10 @@ public class JmsManagementService {
 
   private synchronized void closeConnection ()
   {
-    try {
-      //session.close();
-      connection.close();
-      connectionOpen = false;
-      notifyAll();
-    }
-    catch (JMSException e) {
-      e.printStackTrace();
-    }
+    //session.close();
+    //connection.close();
+    connectionOpen = false;
+    notifyAll();
   }
   
   public String getServerQueueName()

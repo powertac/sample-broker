@@ -18,6 +18,8 @@ package org.powertac.samplebroker.core;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Date;
+
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import net.sf.json.JSONObject;
@@ -36,23 +38,29 @@ import org.w3c.dom.Node;
 @Service
 public class BrokerTournamentService
 {
-  static private Logger log = Logger.getLogger(BrokerMessageReceiver.class);
+  static private Logger log = Logger.getLogger(BrokerTournamentService.class);
 
   @Autowired
   private BrokerPropertiesService brokerPropertiesService;
 
   // The game specific token is only valid for one game
-  private String gameToken = null;
+  //private String gameToken = null;
   private String jmsUrl = null;
+  private String brokerQueueName = null;
+  private String serverQueueName = null;
 
   // Configurable parameters
   private String authToken = null;
   private String tourneyName = null;
+
+  @ConfigurableValue(valueType = "String",
+          description = "Response type to receive from the TS xml or json")
   private String responseType = "xml";
-  //private String username = null;
 
   // If set to negative number infinite retries
-  private int maxTry = 5;
+  @ConfigurableValue(valueType = "Integer",
+          description = "Maximum number of tries to connect to Tournament Scheduler")
+  private int maxTry = 50;
 
   public void init()
   {
@@ -64,42 +72,33 @@ public class BrokerTournamentService
     return responseType;
   }
 
-  @ConfigurableValue(valueType = "String", description = "Response type to receive from the TS xml or json")
-  public void setResponseType(String responseType)
-  {
-    this.responseType = responseType;
-  }
-
   public int getMaxTry()
   {
     return maxTry;
   }
-
-  @ConfigurableValue(valueType = "Integer", description = "Maximum number of tries to connect to Tournament Scheduler")
-  public void setMaxTry(int maxTry)
+  
+  public String getJmsUrl ()
   {
-    this.maxTry = maxTry;
+    return jmsUrl;
   }
-
-  public String getGameToken()
+  
+  public String getServerQueueName ()
   {
-    return gameToken;
+    return serverQueueName;
   }
-
-  public void setGameToken(String gameToken)
+  
+  public String getBrokerQueueName ()
   {
-    this.gameToken = gameToken;
+    return brokerQueueName;
   }
 
   // Spins current login attemt for n seconds and url to retry
   private void spin(int seconds)
   {
     try {
-
       Thread.sleep(seconds * 1000);
-    } catch (InterruptedException e)
-    {
-      // unable to sleep
+    } catch (InterruptedException e) {
+      // insomnia -- unable to sleep
       e.printStackTrace();
     }
   }
@@ -109,10 +108,10 @@ public class BrokerTournamentService
     try {
       // Build proper connection string to tournament scheduler for
       // login
-      String restAuthToken = "authToken=" + this.authToken + "&";
-      String restTourneyName = "requestJoin=" + this.tourneyName + "&";
+      String restAuthToken = "authToken=" + this.authToken;
+      String restTourneyName = "requestJoin=" + this.tourneyName;
       String restResponseType = "type=" + this.responseType;
-      String finalUrl = tsUrl + "?" + restAuthToken + restTourneyName
+      String finalUrl = tsUrl + "?" + restAuthToken + "&" + restTourneyName + "&"
               + restResponseType;
       log.info("Connecting to TS with " + finalUrl);
 
@@ -149,16 +148,23 @@ public class BrokerTournamentService
           return false;
         }
         else if (loginNode != null) {
-          System.out.println("Login Message Received!");
-          String checkJmsUrl = doc.getElementsByTagName("jmsUrl").item(0).getFirstChild().getNodeValue();
-          String checkToken = doc.getElementsByTagName("gameToken").item(0).getFirstChild().getNodeValue();
-          log.info("Login message received! ");
-          log.info("jmsUrl="+checkJmsUrl);
-          log.info("gameToken="+checkToken);
+          System.out.println("Login response received!");
+          log.info("Login response received! ");
 
-          System.out.printf("Login message receieved!\njmsUrl=%s\ngameToken=%s\n",checkJmsUrl,checkToken);
-          this.jmsUrl = checkJmsUrl;
-          this.gameToken = checkToken;
+          String checkJmsUrl = doc.getElementsByTagName("jmsUrl").item(0).getFirstChild().getNodeValue();
+          jmsUrl = checkJmsUrl;
+          log.info("jmsUrl=" + checkJmsUrl);
+
+          String checkBrokerQueue = doc.getElementsByTagName("queueName").item(0).getFirstChild().getNodeValue();
+          brokerQueueName = checkBrokerQueue;
+          log.info("brokerQueueName=" + checkBrokerQueue);
+
+          String checkServerQueue = doc.getElementsByTagName("serverQueue").item(0).getFirstChild().getNodeValue();
+          serverQueueName = checkServerQueue;
+          log.info("serverQueueName=" + checkServerQueue);
+
+          System.out.printf("Login message receieved!\n  jmsUrl=%s\n  queueName=%s\n  serverQueue=%s\n",
+                            checkJmsUrl, checkBrokerQueue, checkServerQueue);
           return true;
         }
         else if (doneNode != null) {
@@ -170,10 +176,6 @@ public class BrokerTournamentService
           log.fatal("Invalid message type recieved");
           return false;
         }
-
-        // TODO parse login success
-        // TODO parse done success
-
       }
       else { // response type was json parse accordingly
         String jsonTxt = IOUtils.toString(input);
@@ -186,6 +188,7 @@ public class BrokerTournamentService
         return false;
 
         // TODO: Good Json Parsing
+        // JEC: not sure why this is important...
       }
     }
     catch (Exception e) { // exception hit return false
@@ -196,7 +199,7 @@ public class BrokerTournamentService
       log.fatal(e.getMessage());
       // Sleep and wait for network
       try {
-        Thread.sleep(2000);
+        Thread.sleep(20000);
       }
       catch (InterruptedException e1) {
         e1.printStackTrace();
@@ -204,23 +207,24 @@ public class BrokerTournamentService
       }
       return false;
     }
-
   }
 
-  // Returns the game URL on success, dies on failure
-  public String login(String tournamentName,
-                      String tsUrl,
-                      String authToken)
+  // Returns true on success, dies on failure
+  public boolean login(String tournamentName,
+                       String tsUrl,
+                       String authToken,
+                       long quittingTime)
   {
     this.tourneyName = tournamentName;
     this.authToken = authToken;
     
     if (this.authToken != null && tsUrl != null) {
-      while (maxTry > 0) {
+      while (maxTry > 0 &&
+              (quittingTime == 0l || new Date().getTime() < quittingTime)) {
         System.out.println("Connecting to TS...");
         if (loginMaybe(tsUrl)) {
-          log.info("Login Successful! Game token: " + this.gameToken);
-          return this.jmsUrl;
+          log.info("Login Successful!");
+          return true;
         }
       }
       System.out.println("Max attempts reached...shutting down");
@@ -231,6 +235,6 @@ public class BrokerTournamentService
       log.fatal("Incorrect Tournament Scheduler URL or Broker Auth Token");
       System.exit(0);
     }
-    return null;
+    return false;
   }
 }

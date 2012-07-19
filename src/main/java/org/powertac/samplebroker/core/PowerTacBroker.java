@@ -18,13 +18,7 @@ package org.powertac.samplebroker.core;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
-
-import joptsimple.OptionException;
-import joptsimple.OptionParser;
-import joptsimple.OptionSet;
-import joptsimple.OptionSpec;
 
 import org.apache.log4j.Logger;
 import org.joda.time.Instant;
@@ -132,6 +126,8 @@ implements BrokerContext
   private int timeslotCompleted = 0; // index of last completed timeslot
   private boolean running = false; // true to run, false to stop
   private BrokerAdapter adapter;
+  private String serverQueueName = "serverInput";
+  private String brokerQueueName = null; // set by tournament manager
   
   // needed for backward compatibility
   private String jmsBrokerUrl = null;
@@ -143,10 +139,18 @@ implements BrokerContext
   {
     super();
   }
-  
-  public void startSession (File configFile, String jmsUrl, long end)
+
+  /**
+   * Starts a new session
+   */
+  public void startSession (File configFile, String jmsUrl,
+                            String queueName, String serverQueue, long end)
   {
     quittingTime = end;
+    if (null != queueName && !queueName.isEmpty())
+      brokerQueueName = queueName;
+    if (null != serverQueue&& !serverQueue.isEmpty())
+      serverQueueName = serverQueue;
     if (null != configFile && configFile.canRead())
       propertiesService.setUserConfig(configFile);
     if (null != jmsUrl)
@@ -196,30 +200,33 @@ implements BrokerContext
    */
   public void run ()
   {
+    if (null == brokerQueueName)
+      brokerQueueName = username;
     // log into the tournament manager if tourneyUrl is non-empty
-    if (null != tourneyUrl && !tourneyUrl.isEmpty()) {
-      String newUrl = brokerTournamentService.login(tourneyName,
-                                                    tourneyUrl,
-                                                    authToken);
-      if (null != newUrl) {
-        jmsBrokerUrl = newUrl;
-      }
+    if (null != tourneyUrl && !tourneyUrl.isEmpty() &&
+            brokerTournamentService.login(tourneyName,
+                                          tourneyUrl,
+                                          authToken,
+                                          quittingTime)) {
+        jmsBrokerUrl = brokerTournamentService.getJmsUrl();
+        //serverQueueName = brokerTournamentService.getServerQueueName();
+        brokerQueueName = brokerTournamentService.getBrokerQueueName();
+        serverQueueName = brokerTournamentService.getServerQueueName();
     }
     
     // wait for the JMS broker to show up and create our queue
     
-    String brokerQueueName = generateQueueName();
     adapter.setQueueName(brokerQueueName);
     // if null, assume local broker without jms connectivity
-    jmsManagementService.init(jmsBrokerUrl, brokerQueueName);
+    jmsManagementService.init(jmsBrokerUrl, serverQueueName);
     jmsManagementService.registerMessageListener(brokerMessageReceiver,
                                                  brokerQueueName);
+    log.info("Listening on queue " + brokerQueueName);
     
     // Log in to server.
     // In case the server does not respond within  second
     BrokerAuthentication auth =
-            new BrokerAuthentication(username, password,
-                                     adapter.toQueueName());
+            new BrokerAuthentication(username, password);
     synchronized(this) {
       long now = new Date().getTime();
       while (!adapter.isEnabled() && (new Date().getTime() - now) < retryTimeLimit) {
@@ -256,22 +263,8 @@ implements BrokerContext
     }
     jmsManagementService.shutdown();
   }
-
-  private String generateQueueName ()
-  {
-    long time = new Date().getTime() & 0xffffffff;
-    long ran = (long)(time * (Math.random() + 0.5));
-    return adapter.getUsername() + "." + Long.toString(ran, 31);
-  }
   
   // ------------- Accessors ----------------
-//  /**
-//   * Returns the message router
-//   */
-//  public MessageDispatcher getRouter ()
-//  {
-//    return router;
-//  }
   
   /**
    * Returns the "real" broker underneath this monstrosity
@@ -290,14 +283,6 @@ implements BrokerContext
   {
     return adapter.getUsername();
   }
-  
-//  /**
-//   * Returns the customerRepo. Cannot be called until after initialization.
-//   */
-//  public CustomerRepo getCustomerRepo ()
-//  {
-//    return customerRepo;
-//  }
 
   /**
    * Returns the simulation base time
