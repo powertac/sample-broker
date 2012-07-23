@@ -18,6 +18,7 @@ package org.powertac.samplebroker.core;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.log4j.Logger;
