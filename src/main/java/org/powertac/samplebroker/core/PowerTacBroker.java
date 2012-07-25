@@ -18,6 +18,7 @@ package org.powertac.samplebroker.core;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -91,8 +92,12 @@ implements BrokerContext
   private int usageRecordLength = 7 * 24; // one week
   
   @ConfigurableValue(valueType = "Integer",
-      description = "Login retry timeout")
-  private Integer loginRetryTimeout = 3000;
+      description = "Login retry timeout in msec")
+  private Integer loginRetryTimeout = 3000; // 3 sec
+  
+  @ConfigurableValue(valueType = "Integer",
+          description = "Time limit in msec to retry logins before giving up")
+  private Integer retryTimeLimit = 180000; // 3 min
 
   @ConfigurableValue(valueType = "String",
           description = "Broker username")
@@ -224,7 +229,8 @@ implements BrokerContext
     BrokerAuthentication auth =
             new BrokerAuthentication(username, password);
     synchronized(this) {
-      while (!adapter.isEnabled()) {
+      long now = new Date().getTime();
+      while (!adapter.isEnabled() && (new Date().getTime() - now) < retryTimeLimit) {
         try {
           sendMessage(auth);
           wait(loginRetryTimeout);
@@ -244,6 +250,8 @@ implements BrokerContext
         }
       }
     }
+    if (!adapter.isEnabled())
+      return;
     
     // start the activation thread
     BrokerRunner runner = new BrokerRunner(this);

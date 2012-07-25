@@ -130,6 +130,7 @@ public class BrokerTournamentService
         Document doc = docBuilder.parse(input);
 
         doc.getDocumentElement().normalize();
+        System.out.println("login response: " + doc.toString());
 
         // Three different message types
         Node retryNode = doc.getElementsByTagName("retry").item(0);
@@ -221,7 +222,7 @@ public class BrokerTournamentService
     if (this.authToken != null && tsUrl != null) {
       while (maxTry > 0 &&
               (quittingTime == 0l || new Date().getTime() < quittingTime)) {
-        System.out.println("Connecting to TS...");
+        System.out.println("Connecting to TS at " + tsUrl);
         if (loginMaybe(tsUrl)) {
           log.info("Login Successful!");
           return true;
