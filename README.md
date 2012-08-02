@@ -4,7 +4,7 @@ The current version assumes the server is running on localhost, and is not picky
 
 You can run the broker from the command line using maven, as
 
-`mvn exec:exec [-Dexec.args="<arguments>"]`
+`mvn compile exec:exec [-Dexec.args="<arguments>"]`
 
 where arguments can include:
 
@@ -15,4 +15,4 @@ where arguments can include:
 * `--queue-name name` tells the broker to listen on the named queue for messages from the server. This is really only useful for testing, since the queue name defaults to the broker name, and in a tournament situation is provided by the tournament manager upon successful login.
 * `--server-queue name` tells the broker the name of the JMS input queue for the server. This is also needed only for testing, because the queue name defaults to 'serverInput' and in a tournament situation is provided by the tournament manager upon successful login.
 
-If there are no non-default arguments, it is enough to simply run the broker as `mvn exec:exec`.
+If there are no non-default arguments, and if the broker has already been compiled, then it is enough to simply run the broker as `mvn exec:exec`.
