@@ -25,15 +25,18 @@ import org.joda.time.Instant;
 import org.powertac.common.Broker;
 import org.powertac.common.Competition;
 import org.powertac.common.CustomerInfo;
+import org.powertac.common.HourlyCharge;
 import org.powertac.common.Rate;
 import org.powertac.common.Tariff;
 import org.powertac.common.TariffSpecification;
 import org.powertac.common.TariffTransaction;
 import org.powertac.common.TimeService;
+import org.powertac.common.Timeslot;
 import org.powertac.common.enumerations.PowerType;
 import org.powertac.common.msg.BalancingOrder;
 import org.powertac.common.msg.CustomerBootstrapData;
 import org.powertac.common.msg.TariffStatus;
+import org.powertac.common.msg.VariableRateUpdate;
 import org.powertac.common.repo.CustomerRepo;
 import org.powertac.common.repo.TariffRepo;
 import org.powertac.common.repo.TimeslotRepo;
@@ -83,6 +86,8 @@ implements PortfolioManager, Initializable, Activatable
                   HashMap<CustomerInfo, CustomerRecord>> customerSubscriptions;
   private HashMap<PowerType, List<TariffSpecification>> competingTariffs;
 
+  private HashMap<PowerType, TariffSpecification> myTariffs;
+  
   // parameters
   private double defaultMargin = 0.5;
   private double fixedPerKwh = -0.06;
@@ -110,6 +115,7 @@ implements PortfolioManager, Initializable, Activatable
     customerSubscriptions = new HashMap<TariffSpecification,
         HashMap<CustomerInfo, CustomerRecord>>();
     competingTariffs = new HashMap<PowerType, List<TariffSpecification>>();
+    myTariffs = new HashMap<PowerType, TariffSpecification>();
     for (Class<?> messageType: Arrays.asList(CustomerBootstrapData.class,
                                              TariffSpecification.class,
                                              TariffStatus.class,
@@ -322,7 +328,7 @@ implements PortfolioManager, Initializable, Activatable
       TariffSpecification spec =
           new TariffSpecification(broker.getBroker(), pt)
               .withPeriodicPayment(defaultPeriodicPayment);
-      Rate rate = new Rate().withValue(rateValue);
+      Rate rate = new Rate().withValue(rateValue).withFixed(false);
       if (pt.isInterruptible()) {
         // set max curtailment
         rate.withMaxCurtailment(0.1);
@@ -330,6 +336,7 @@ implements PortfolioManager, Initializable, Activatable
       spec.addRate(rate);
       customerSubscriptions.put(spec, new HashMap<CustomerInfo, CustomerRecord>());
       tariffRepo.addSpecification(spec);
+      myTariffs.put(pt, spec);
       broker.sendMessage(spec);
     }
   }
@@ -338,17 +345,26 @@ implements PortfolioManager, Initializable, Activatable
   private void improveTariffs()
   {
     // quick magic-number hack to inject a balancing order
-    int timeslotIndex = timeslotRepo.currentTimeslot().getSerialNumber();
+    Timeslot currentTs = timeslotRepo.currentTimeslot();
+    int timeslotIndex = currentTs.getSerialNumber();
     if (371 == timeslotIndex) {
-      for (TariffSpecification spec : tariffRepo.findAllTariffSpecifications()) {
-        if (PowerType.INTERRUPTIBLE_CONSUMPTION == spec.getPowerType()) {
-          BalancingOrder order = new BalancingOrder(broker.getBroker(),
-                                                    spec, 
-                                                    0.5,
-                                                    spec.getRates().get(0).getMinValue() * 0.9);
-          broker.sendMessage(order);
-        }
-      }
+      TariffSpecification spec = myTariffs.get(PowerType.INTERRUPTIBLE_CONSUMPTION);
+      BalancingOrder order = new BalancingOrder(broker.getBroker(),
+                                                spec, 
+                                                0.5,
+                                                spec.getRates().get(0).getMinValue() * 0.9);
+      broker.sendMessage(order);
+    }
+    // hack to set variable rates
+    if (371 < timeslotIndex) {
+      TariffSpecification spec = myTariffs.get(PowerType.CONSUMPTION);
+      Rate rate = spec.getRates().get(0);
+      double defaultCharge = rate.getMinValue();
+      Instant effective = currentTs.getEndInstant().plus(TimeService.HOUR);
+      HourlyCharge chg = new HourlyCharge(effective, defaultCharge);
+      VariableRateUpdate vru = new VariableRateUpdate(broker.getBroker(),
+                                                      rate, chg);
+      broker.sendMessage(vru);
     }
   }
 
