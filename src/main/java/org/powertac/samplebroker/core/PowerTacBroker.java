@@ -491,8 +491,19 @@ implements BrokerContext
   synchronized int waitForActivation (int index)
   {
     try {
-      while (running && (timeslotCompleted <= index))
-        wait();
+      while (running && (timeslotCompleted <= index)) {
+        long maxWait = 120000;
+        long nowStamp = System.currentTimeMillis();
+        wait(maxWait);
+        long diff = System.currentTimeMillis() - nowStamp;
+        if (diff >= maxWait && index != 0) {
+          String msg = "worker thread waited more than "
+              + maxWait / 1000 +" secs for server, abandoning game";
+          System.out.println("\n" + msg +"\n");
+          log.warn(msg);
+          running = false;
+        }
+      }
     }
     catch (InterruptedException ie) {
       log.warn("activation interrupted: " + ie);
