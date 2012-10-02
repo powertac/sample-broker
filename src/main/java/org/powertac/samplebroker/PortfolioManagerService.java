@@ -328,7 +328,8 @@ implements PortfolioManager, Initializable, Activatable
       TariffSpecification spec =
           new TariffSpecification(broker.getBroker(), pt)
               .withPeriodicPayment(defaultPeriodicPayment);
-      Rate rate = new Rate().withValue(rateValue).withFixed(false);
+      Rate rate = new Rate().withValue(rateValue/2.0).withFixed(false)
+              .withMaxValue(rateValue*2.0).withExpectedMean(rateValue);
       if (pt.isInterruptible()) {
         // set max curtailment
         rate.withMaxCurtailment(0.1);
@@ -359,9 +360,10 @@ implements PortfolioManager, Initializable, Activatable
     if (371 < timeslotIndex) {
       TariffSpecification spec = myTariffs.get(PowerType.CONSUMPTION);
       Rate rate = spec.getRates().get(0);
-      double defaultCharge = rate.getMinValue();
+      double charge = rate.getExpectedMean() *
+              (1.0 + (timeslotIndex - 371) / 50.0);
       Instant effective = currentTs.getEndInstant().plus(TimeService.HOUR);
-      HourlyCharge chg = new HourlyCharge(effective, defaultCharge);
+      HourlyCharge chg = new HourlyCharge(effective, charge);
       VariableRateUpdate vru = new VariableRateUpdate(broker.getBroker(),
                                                       rate, chg);
       broker.sendMessage(vru);
