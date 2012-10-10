@@ -30,6 +30,7 @@ import org.apache.activemq.pool.PooledConnectionFactory;
 import org.apache.log4j.Logger;
 import org.powertac.common.config.ConfigurableValue;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jms.connection.CachingConnectionFactory;
 import org.springframework.jms.listener.AbstractMessageListenerContainer;
 import org.springframework.jms.listener.DefaultMessageListenerContainer;
 import org.springframework.stereotype.Service;
