@@ -73,13 +73,24 @@ public class JmsManagementService {
       setJmsBrokerUrl(overridenBrokerUrl);
     }
     
+    ActiveMQConnectionFactory amqConnectionFactory = null;
     if (connectionFactory instanceof PooledConnectionFactory) {
       PooledConnectionFactory pooledConnectionFactory = (PooledConnectionFactory) connectionFactory;
       if (pooledConnectionFactory.getConnectionFactory() instanceof ActiveMQConnectionFactory) {
-        ActiveMQConnectionFactory amqConnectionFactory = (ActiveMQConnectionFactory) pooledConnectionFactory
-                .getConnectionFactory();
-        amqConnectionFactory.setBrokerURL(getJmsBrokerUrl());
+        amqConnectionFactory = (ActiveMQConnectionFactory) pooledConnectionFactory
+            .getConnectionFactory();
       }
+    }
+    else if (connectionFactory instanceof CachingConnectionFactory) {
+      CachingConnectionFactory cachingConnectionFactory = (CachingConnectionFactory) connectionFactory;
+      if (cachingConnectionFactory.getTargetConnectionFactory() instanceof ActiveMQConnectionFactory) {
+        amqConnectionFactory = (ActiveMQConnectionFactory) cachingConnectionFactory
+            .getTargetConnectionFactory();
+      }
+    }
+
+    if (amqConnectionFactory != null) {
+      amqConnectionFactory.setBrokerURL(getJmsBrokerUrl());
     }
   }
   
