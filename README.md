@@ -28,7 +28,7 @@ where arguments can include:
 
 If there are no non-default arguments, and if the broker has already been compiled, then it is enough to simply run the broker as `mvn exec:exec`.
 
-Preparing an executable jar
+Prepare an executable jar
 ---------------------------
 
 Power TAC and other competitive simulations are research tools. A major advantage of the competitive simulation model is the ability to test ideas in a competitive environment. This requires competitors, which means we need to share our broker implementations with each other. Since most teams will be understandably reluctant to share source code, we need a method to share binaries. This package comes with an ability to create an "executable jar" file from source that includes all dependencies, and typically needs only a configuration file to work. You can create an executable jar as
