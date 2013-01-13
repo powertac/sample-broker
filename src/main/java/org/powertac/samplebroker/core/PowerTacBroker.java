@@ -391,7 +391,6 @@ implements BrokerContext
     for (int sn = 0; sn <= bootTimeslotCount; sn++) {
       Timeslot slot =
           timeslotRepo.makeTimeslot(bootBaseTime.plus(sn * comp.getTimeslotDuration()));
-      slot.disable();
     }
     // now set time to end of bootstrap period.
     timeService.setClockParameters(comp.getClockParameters());
@@ -458,7 +457,7 @@ implements BrokerContext
          index ++) {
       Timeslot closed = 
           timeslotRepo.findOrCreateBySerialNumber(index);
-      closed.disable();
+      //closed.disable();
       currentTimeslot = index;
     }
     for (int index = tu.getFirstEnabled();
@@ -466,7 +465,7 @@ implements BrokerContext
          index++) {
       Timeslot open =
           timeslotRepo.findOrCreateBySerialNumber(index);
-      open.enable();
+      //open.enable();
     }
   }
   
