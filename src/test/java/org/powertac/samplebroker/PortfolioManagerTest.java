@@ -83,7 +83,7 @@ public class PortfolioManagerTest
     CustomerInfo midvale = new CustomerInfo("Midvale", 1000); 
     customerRepo.add(midvale);
     // create a Timeslot for use by the bootstrap data
-    Timeslot ts0 = new Timeslot(8*24, baseTime.plus(TimeService.DAY * 8), null);
+    Timeslot ts0 = new Timeslot(8*24, baseTime.plus(TimeService.DAY * 8));
     when(timeslotRepo.currentTimeslot()).thenReturn(ts0);
     // send to broker and check
     double[] podunkData = new double[7*24];

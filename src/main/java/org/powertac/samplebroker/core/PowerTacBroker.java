@@ -388,12 +388,13 @@ implements BrokerContext
     int bootTimeslotCount =
         (int)(comp.getBootstrapTimeslotCount() + 
               comp.getBootstrapDiscardedTimeslots());
-    for (int sn = 0; sn <= bootTimeslotCount; sn++) {
-      Timeslot slot =
-          timeslotRepo.makeTimeslot(bootBaseTime.plus(sn * comp.getTimeslotDuration()));
-    }
+    //for (int sn = 0; sn <= bootTimeslotCount; sn++) {
+    //  Timeslot slot =
+    //      timeslotRepo.makeTimeslot(bootBaseTime.plus(sn * comp.getTimeslotDuration()));
+    //}
     // now set time to end of bootstrap period.
     timeService.setClockParameters(comp.getClockParameters());
+    timeService.init(bootBaseTime.plus(bootTimeslotCount * comp.getTimeslotDuration()));
     log.info("Sim start time: " + timeService.getCurrentDateTime().toString());
   }
 
