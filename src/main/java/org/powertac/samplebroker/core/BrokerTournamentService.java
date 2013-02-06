@@ -15,16 +15,8 @@
  */
 package org.powertac.samplebroker.core;
 
-import java.io.InputStream;
-import java.net.URL;
-import java.net.URLConnection;
-import java.util.Date;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import net.sf.json.JSONObject;
 import net.sf.json.JSONSerializer;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.powertac.common.config.ConfigurableValue;
@@ -32,6 +24,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.InputStream;
+import java.net.URL;
+import java.net.URLConnection;
+import java.util.Date;
 /**
  * @author Erik Onarheim
  */
@@ -164,7 +163,7 @@ public class BrokerTournamentService
           serverQueueName = checkServerQueue;
           log.info("serverQueueName=" + checkServerQueue);
 
-          System.out.printf("Login message receieved!\n  jmsUrl=%s\n  queueName=%s\n  serverQueue=%s\n",
+          System.out.printf("Login message received!\n  jmsUrl=%s\n  queueName=%s\n  serverQueue=%s\n",
                             checkJmsUrl, checkBrokerQueue, checkServerQueue);
           return true;
         }
