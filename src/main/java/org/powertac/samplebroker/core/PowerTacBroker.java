@@ -15,37 +15,25 @@
  */
 package org.powertac.samplebroker.core;
 
+import org.apache.log4j.Logger;
+import org.joda.time.Instant;
+import org.powertac.common.*;
+import org.powertac.common.config.ConfigurableValue;
+import org.powertac.common.msg.*;
+import org.powertac.common.repo.CustomerRepo;
+import org.powertac.common.repo.TimeslotRepo;
+import org.powertac.common.spring.SpringApplicationContext;
+import org.powertac.samplebroker.interfaces.Activatable;
+import org.powertac.samplebroker.interfaces.BrokerContext;
+import org.powertac.samplebroker.interfaces.Initializable;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
-
-import org.apache.log4j.Logger;
-import org.joda.time.Instant;
-import org.powertac.common.Broker;
-import org.powertac.common.Competition;
-import org.powertac.common.CustomerInfo;
-import org.powertac.common.IdGenerator;
-import org.powertac.common.TimeService;
-import org.powertac.common.Timeslot;
-import org.powertac.samplebroker.interfaces.Activatable;
-import org.powertac.samplebroker.interfaces.BrokerContext;
-import org.powertac.samplebroker.interfaces.Initializable;
-import org.powertac.common.config.ConfigurableValue;
-import org.powertac.common.msg.BrokerAccept;
-import org.powertac.common.msg.BrokerAuthentication;
-import org.powertac.common.msg.SimEnd;
-import org.powertac.common.msg.SimPause;
-import org.powertac.common.msg.SimResume;
-import org.powertac.common.msg.SimStart;
-import org.powertac.common.msg.TimeslotComplete;
-import org.powertac.common.msg.TimeslotUpdate;
-import org.powertac.common.repo.CustomerRepo;
-import org.powertac.common.repo.TimeslotRepo;
-import org.powertac.common.spring.SpringApplicationContext;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
 /**
  * This is the top-level controller for the broker. It sets up the other
@@ -214,18 +202,19 @@ implements BrokerContext
         brokerQueueName = brokerTournamentService.getBrokerQueueName();
         serverQueueName = brokerTournamentService.getServerQueueName();
     }
-    
+
     // wait for the JMS broker to show up and create our queue
-    
     adapter.setQueueName(brokerQueueName);
+
     // if null, assume local broker without jms connectivity
     jmsManagementService.init(jmsBrokerUrl, serverQueueName);
     jmsManagementService.registerMessageListener(brokerMessageReceiver,
-                                                 brokerQueueName);
+        brokerQueueName);
+
     log.info("Listening on queue " + brokerQueueName);
     
     // Log in to server.
-    // In case the server does not respond within  second
+    // In case the server does not respond within second
     BrokerAuthentication auth =
             new BrokerAuthentication(username, password);
     synchronized(this) {
@@ -491,17 +480,26 @@ implements BrokerContext
   synchronized int waitForActivation (int index)
   {
     try {
+      int remainingTimeouts = 6; // Wait max 12 mins == 6 * maxWait
       while (running && (timeslotCompleted <= index)) {
         long maxWait = 120000;
         long nowStamp = System.currentTimeMillis();
         wait(maxWait);
         long diff = System.currentTimeMillis() - nowStamp;
-        if (diff >= maxWait && index != 0) {
-          String msg = "worker thread waited more than "
-              + maxWait / 1000 +" secs for server, abandoning game";
-          System.out.println("\n" + msg +"\n");
-          log.warn(msg);
-          running = false;
+        if (diff >= maxWait) {
+          if (index != 0) {
+            String msg = "worker thread waited more than "
+                + maxWait / 1000 +" secs for server, abandoning game";
+            System.out.println("\n" + msg +"\n");
+            log.warn(msg);
+            running = false;
+          } else if (--remainingTimeouts <= 0) {
+            String msg = "worker thread waited more than "
+                + "720 secs for server, abandoning game";
+            System.out.println("\n" + msg + "\n");
+            log.warn(msg);
+            running = false;
+          }
         }
       }
     }
@@ -541,7 +539,7 @@ implements BrokerContext
           log.info("worker thread exits at ts " + timeslotIndex);
           return;
         }
-        
+
         Timeslot current = timeslotRepo.currentTimeslot();
         log.info("activate at " + timeService.getCurrentDateTime().toString()
                  + ", timeslot " + current.getSerialNumber());

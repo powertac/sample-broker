@@ -15,29 +15,16 @@
  */
 package org.powertac.samplebroker;
 
-import java.util.Arrays;
-
 import org.apache.log4j.Logger;
-import org.joda.time.Instant;
 import org.powertac.common.BankTransaction;
 import org.powertac.common.CashPosition;
 import org.powertac.common.Competition;
-import org.powertac.common.CustomerInfo;
-import org.powertac.common.Timeslot;
-import org.powertac.common.msg.BrokerAccept;
 import org.powertac.common.msg.DistributionReport;
-import org.powertac.common.msg.SimEnd;
-import org.powertac.common.msg.SimPause;
-import org.powertac.common.msg.SimResume;
-import org.powertac.common.msg.SimStart;
-import org.powertac.common.msg.TimeslotComplete;
-import org.powertac.common.msg.TimeslotUpdate;
-import org.powertac.samplebroker.core.MessageDispatcher;
-import org.powertac.samplebroker.core.PowerTacBroker;
 import org.powertac.samplebroker.interfaces.BrokerContext;
 import org.powertac.samplebroker.interfaces.Initializable;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.Arrays;
 
 /**
  * Handles incoming context and bank messages with example behaviors. 

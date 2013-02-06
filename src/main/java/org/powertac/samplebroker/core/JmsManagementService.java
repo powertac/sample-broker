@@ -15,16 +15,6 @@
  */
 package org.powertac.samplebroker.core;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.Executor;
-
-import javax.annotation.Resource;
-import javax.jms.Connection;
-import javax.jms.ConnectionFactory;
-import javax.jms.MessageListener;
-import javax.jms.Session;
-
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.pool.PooledConnectionFactory;
 import org.apache.log4j.Logger;
@@ -34,6 +24,12 @@ import org.springframework.jms.connection.CachingConnectionFactory;
 import org.springframework.jms.listener.AbstractMessageListenerContainer;
 import org.springframework.jms.listener.DefaultMessageListenerContainer;
 import org.springframework.stereotype.Service;
+
+import javax.annotation.Resource;
+import javax.jms.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.Executor;
 
 /**
  * 
@@ -106,7 +102,7 @@ public class JmsManagementService {
     container.setTaskExecutor(taskExecutor);
     container.afterPropertiesSet();
     container.start();
-    
+
     listenerContainerMap.put(listener, container);
   }
 
