@@ -33,6 +33,7 @@ import org.powertac.common.TimeService;
 import org.powertac.common.enumerations.PowerType;
 import org.powertac.common.msg.BalancingOrder;
 import org.powertac.common.msg.CustomerBootstrapData;
+import org.powertac.common.msg.TariffRevoke;
 import org.powertac.common.msg.TariffStatus;
 import org.powertac.common.repo.CustomerRepo;
 import org.powertac.common.repo.TariffRepo;
@@ -232,6 +233,10 @@ implements PortfolioManager, Initializable, Activatable
     Broker theBroker = spec.getBroker();
     if (broker.getBrokerUsername() == theBroker.getUsername()) {
       // if it's ours, just log it
+      TariffSpecification original =
+              tariffRepo.findSpecificationById(spec.getId());
+      if (null == original)
+        log.error("Spec " + spec.getId() + " not in local repo");
       log.info("published " + spec);
     }
     else {
@@ -254,6 +259,19 @@ implements PortfolioManager, Initializable, Activatable
    */
   public void handleMessage(TariffTransaction ttx)
   {
+    // make sure we have this tariff
+    TariffSpecification newSpec = ttx.getTariffSpec();
+    if (newSpec == null) {
+      log.error("TariffTransaction type=" + ttx.getTxType()
+                + " for unknown spec");
+    }
+    else {
+      TariffSpecification oldSpec =
+              tariffRepo.findSpecificationById(newSpec.getId());
+      if (oldSpec != newSpec) {
+        log.error("Incoming spec " + newSpec.getId() + " not matched in repo");
+      }
+    }
     TariffTransaction.Type txType = ttx.getTxType();
     CustomerRecord record = getCustomerRecordByTariff(ttx.getTariffSpec(),
                                                       ttx.getCustomerInfo());
@@ -349,6 +367,44 @@ implements PortfolioManager, Initializable, Activatable
           broker.sendMessage(order);
         }
       }
+    }
+    // magic-number hack to supersede a tariff
+    if (380 == timeslotIndex) {
+      // find the existing CONSUMPTION tariff
+      TariffSpecification oldc = null;
+      TariffSpecification oldp = null;
+      List<TariffSpecification> candidates =
+              tariffRepo.findTariffSpecificationsByPowerType(PowerType.CONSUMPTION);
+      if (null == candidates || 0 == candidates.size())
+        log.error("No CONSUMPTION tariffs found");
+      else {
+        oldc = candidates.get(0);
+      }
+      candidates = tariffRepo.findTariffSpecificationsByPowerType(PowerType.WIND_PRODUCTION);
+      if (null == candidates || 0 == candidates.size())
+        log.error("No WIND_PRODUCTION tariffs found");
+      else {
+        oldp = candidates.get(0);
+      }
+
+      double rateValue = oldc.getRates().get(0).getValue();
+      // create a new CONSUMPTION tariff
+      TariffSpecification spec =
+              new TariffSpecification(broker.getBroker(), PowerType.CONSUMPTION)
+                  .withPeriodicPayment(defaultPeriodicPayment * 1.1);
+      Rate rate = new Rate().withValue(rateValue);
+      spec.addRate(rate);
+      if (null != oldc)
+        spec.addSupersedes(oldc.getId());
+      if (null != oldp)
+        spec.addSupersedes(oldp.getId());
+      tariffRepo.addSpecification(spec);
+      broker.sendMessage(spec);
+      // revoke the old one
+      TariffRevoke revoke = new TariffRevoke(broker.getBroker(), oldc);
+      broker.sendMessage(revoke);
+      revoke = new TariffRevoke(broker.getBroker(), oldp);
+      broker.sendMessage(revoke);
     }
   }
 

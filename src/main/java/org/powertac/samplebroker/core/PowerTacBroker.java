@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 the original author or authors.
+ * Copyright 2012-2013 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -129,7 +129,13 @@ implements BrokerContext
   private BrokerAdapter adapter;
   private String serverQueueName = "serverInput";
   private String brokerQueueName = null; // set by tournament manager
-  
+
+  // synchronization variables
+  private long brokerTime = 0l;
+  private long serverClockOffset = 0l; // should stay zero for ntp situation
+  private long maxResponseDelay = 800l; // <800msec delay is "immediate"
+  private long defaultResponseTime = 50l;
+
   // needed for backward compatibility
   private String jmsBrokerUrl = null;
 
@@ -210,20 +216,18 @@ implements BrokerContext
                                           authToken,
                                           quittingTime)) {
         jmsBrokerUrl = brokerTournamentService.getJmsUrl();
-        //serverQueueName = brokerTournamentService.getServerQueueName();
         brokerQueueName = brokerTournamentService.getBrokerQueueName();
         serverQueueName = brokerTournamentService.getServerQueueName();
     }
-    
+
     // wait for the JMS broker to show up and create our queue
-    
     adapter.setQueueName(brokerQueueName);
     // if null, assume local broker without jms connectivity
     jmsManagementService.init(jmsBrokerUrl, serverQueueName);
     jmsManagementService.registerMessageListener(brokerMessageReceiver,
                                                  brokerQueueName);
     log.info("Listening on queue " + brokerQueueName);
-    
+
     // Log in to server.
     // In case the server does not respond within  second
     BrokerAuthentication auth =
@@ -232,6 +236,8 @@ implements BrokerContext
       long now = new Date().getTime();
       while (!adapter.isEnabled() && (new Date().getTime() - now) < retryTimeLimit) {
         try {
+          brokerTime = new Date().getTime();
+          auth.setBrokerTime(brokerTime);
           sendMessage(auth);
           wait(loginRetryTimeout);
         }
@@ -252,7 +258,7 @@ implements BrokerContext
     }
     if (!adapter.isEnabled())
       return;
-    
+
     // start the activation thread
     BrokerRunner runner = new BrokerRunner(this);
     runner.start();
@@ -264,9 +270,8 @@ implements BrokerContext
     }
     jmsManagementService.shutdown();
   }
-  
+
   // ------------- Accessors ----------------
-  
   /**
    * Returns the "real" broker underneath this monstrosity
    */
@@ -275,7 +280,7 @@ implements BrokerContext
   {
     return adapter;
   }
-  
+
   /**
    * Returns the username for this broker
    */
@@ -293,7 +298,7 @@ implements BrokerContext
   {
     return baseTime;
   }
-  
+
   /**
    * Returns the length of the standard data array (24h * 7d)
    */
@@ -302,7 +307,7 @@ implements BrokerContext
   {
     return usageRecordLength;
   }
-  
+
   /**
    * Returns the broker's list of competing brokers - non-public
    */
@@ -311,7 +316,17 @@ implements BrokerContext
   {
     return brokerNames;
   }
-  
+
+  /**
+   * Returns the computed server time offset after login. Value is
+   * positive if the server's clock is ahead (shows a later time) of the
+   * broker's clock.
+   */
+  public long getServerTimeOffset ()
+  {
+    return serverClockOffset;
+  }
+
   /**
    * Delegates registrations to the router
    */
@@ -355,13 +370,43 @@ implements BrokerContext
    * and we become part of the game. Before this, we cannot send any messages
    * other than BrokerAuthentication. Also, note that the ID prefix needs to be
    * set before any server-visible entities are created (such as tariff specs).
+   * 
+   * Here we estimate the timeoffset between broker and server. This is
+   * slightly complicated because in a non-tournament situation the
+   * login request might have been sent before the server was prepared
+   * to deal with it. So if the response delay seems out of range,
+   * we ignore the earlier time.
    */
   public synchronized void handleMessage (BrokerAccept accept)
   {
     adapter.setEnabled(true);
+    // set up prefix and keys
     IdGenerator.setPrefix(accept.getPrefix());
     adapter.setKey(accept.getKey());
     router.setKey(accept.getKey());
+    // estimate time offset
+    long now = new Date().getTime();
+    long response = now - brokerTime;
+    if (response < maxResponseDelay) {
+      // assume the response was halfway between login and now
+      now -= response / 2;
+    }
+    else {
+      // assume default response time
+      now -= defaultResponseTime;
+    }
+    if (0l != accept.getServerTime()) {
+      // ignore missing data for backward compatibility
+      serverClockOffset = accept.getServerTime() - now;
+      if (Math.abs(serverClockOffset) < defaultResponseTime / 2) // magic number
+        // assume ntp is working
+        serverClockOffset = 0l;
+    }
+    else {
+      log.info("Server does not provide system time - cannot adjust offset");
+    }
+    log.info("login response = " + response
+             + ", server clock offset = " + serverClockOffset);
     notifyAll();
   }
   
@@ -388,10 +433,6 @@ implements BrokerContext
     int bootTimeslotCount =
         (int)(comp.getBootstrapTimeslotCount() + 
               comp.getBootstrapDiscardedTimeslots());
-    //for (int sn = 0; sn <= bootTimeslotCount; sn++) {
-    //  Timeslot slot =
-    //      timeslotRepo.makeTimeslot(bootBaseTime.plus(sn * comp.getTimeslotDuration()));
-    //}
     // now set time to end of bootstrap period.
     timeService.setClockParameters(comp.getClockParameters());
     timeService.init(bootBaseTime.plus(bootTimeslotCount * comp.getTimeslotDuration()));
@@ -406,7 +447,7 @@ implements BrokerContext
     // local brokers can ignore this.
     log.info("Paused at " + timeService.getCurrentDateTime().toString());
   }
-  
+
   /**
    * Receives the SimResume message, used to update the clock.
    */
@@ -414,22 +455,24 @@ implements BrokerContext
   {
     // local brokers don't need to handle this
     log.info("Resumed");
-    timeService.setStart(sr.getStart().getMillis());
+    timeService.setStart(sr.getStart().getMillis() - serverClockOffset);
     timeService.updateTime();
   }
-  
+
   /**
-   * Receives the SimStart message, used to start the clock.
+   * Receives the SimStart message, used to start the clock. The
+   * server's clock offset is subtracted from the start time indicated
+   * by the server.
    */
   public void handleMessage (SimStart ss)
   {
     // local brokers don't need to do anything with this.
     log.info("SimStart - start time is " + ss.getStart().toString());
-    timeService.setStart(ss.getStart().getMillis());
+    timeService.setStart(ss.getStart().getMillis() - serverClockOffset);
     timeService.updateTime();
     log.info("SimStart - clock set to " + timeService.getCurrentDateTime().toString());
   }
-  
+
   /**
    * Receives the SimEnd message, which ends the broker session.
    */
@@ -440,7 +483,7 @@ implements BrokerContext
     running = false;
     notifyAll();
   }
-  
+
   /**
    * Updates the sim clock on receipt of the TimeslotUpdate message,
    * which should be the first to arrive in each timeslot. We have to disable
@@ -469,7 +512,7 @@ implements BrokerContext
       //open.enable();
     }
   }
-  
+
   /**
    * CashPosition is the last message sent by Accounting.
    * This is normally when any broker would submit its bids, so that's when
@@ -510,7 +553,7 @@ implements BrokerContext
     }
     return timeslotCompleted;
   }
-  
+
   /**
    * Thread to encapsulate internal broker operations, allowing JMS threads
    * to return quickly and stay in sync with the server. 
@@ -519,13 +562,13 @@ implements BrokerContext
   {
     PowerTacBroker parent;
     int timeslotIndex = 0;
-    
+
     public BrokerRunner (PowerTacBroker parent)
     {
       super();
       this.parent = parent;
     }
-    
+
     /**
      * In each timeslot, we must update our portfolio and trade in the 
      * wholesale market.
@@ -541,7 +584,7 @@ implements BrokerContext
           log.info("worker thread exits at ts " + timeslotIndex);
           return;
         }
-        
+
         Timeslot current = timeslotRepo.currentTimeslot();
         log.info("activate at " + timeService.getCurrentDateTime().toString()
                  + ", timeslot " + current.getSerialNumber());
@@ -557,7 +600,7 @@ implements BrokerContext
       }
     }
   }
-  
+
   /**
    * Broker implementation needed to override the receiveMessage method.
    */
