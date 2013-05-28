@@ -372,19 +372,12 @@ implements PortfolioManager, Initializable, Activatable
     if (380 == timeslotIndex) {
       // find the existing CONSUMPTION tariff
       TariffSpecification oldc = null;
-      TariffSpecification oldp = null;
       List<TariffSpecification> candidates =
               tariffRepo.findTariffSpecificationsByPowerType(PowerType.CONSUMPTION);
       if (null == candidates || 0 == candidates.size())
         log.error("No CONSUMPTION tariffs found");
       else {
         oldc = candidates.get(0);
-      }
-      candidates = tariffRepo.findTariffSpecificationsByPowerType(PowerType.WIND_PRODUCTION);
-      if (null == candidates || 0 == candidates.size())
-        log.error("No WIND_PRODUCTION tariffs found");
-      else {
-        oldp = candidates.get(0);
       }
 
       double rateValue = oldc.getRates().get(0).getValue();
@@ -396,14 +389,10 @@ implements PortfolioManager, Initializable, Activatable
       spec.addRate(rate);
       if (null != oldc)
         spec.addSupersedes(oldc.getId());
-      if (null != oldp)
-        spec.addSupersedes(oldp.getId());
       tariffRepo.addSpecification(spec);
       broker.sendMessage(spec);
       // revoke the old one
       TariffRevoke revoke = new TariffRevoke(broker.getBroker(), oldc);
-      broker.sendMessage(revoke);
-      revoke = new TariffRevoke(broker.getBroker(), oldp);
       broker.sendMessage(revoke);
     }
   }
