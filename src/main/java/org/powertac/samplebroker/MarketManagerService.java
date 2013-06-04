@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012 by the original author
+ * Copyright (c) 2012-2013 by the original author
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  */
 package org.powertac.samplebroker;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
@@ -34,7 +33,6 @@ import org.powertac.common.WeatherForecast;
 import org.powertac.common.WeatherReport;
 import org.powertac.common.msg.MarketBootstrapData;
 import org.powertac.common.repo.TimeslotRepo;
-import org.powertac.samplebroker.core.PowerTacBroker;
 import org.powertac.samplebroker.interfaces.Activatable;
 import org.powertac.samplebroker.interfaces.BrokerContext;
 import org.powertac.samplebroker.interfaces.Initializable;
@@ -72,12 +70,12 @@ implements MarketManager, Initializable, Activatable
   private double minMWh = 0.001; // don't worry about 1 KWh or less
 
   // Bid recording
-  private HashMap<Timeslot, Order> lastOrder;
-  private HashMap<Timeslot, ArrayList<MarketTransaction>> marketTxMap;
+  private HashMap<Integer, Order> lastOrder;
+  //private HashMap<Integer, ArrayList<MarketTransaction>> marketTxMap;
   private double[] marketMWh;
   private double[] marketPrice;
   private double meanMarketPrice = 0.0;
-  private ArrayList<WeatherReport> weather;
+  //private ArrayList<WeatherReport> weather;
 
   public MarketManagerService ()
   {
@@ -92,9 +90,9 @@ implements MarketManager, Initializable, Activatable
   public void initialize (BrokerContext broker)
   {
     this.master = broker;
-    lastOrder = new HashMap<Timeslot, Order>();
-    marketTxMap = new HashMap<Timeslot, ArrayList<MarketTransaction>>();
-    weather = new ArrayList<WeatherReport>();
+    lastOrder = new HashMap<Integer, Order>();
+    //marketTxMap = new HashMap<Integer, ArrayList<MarketTransaction>>();
+    //weather = new ArrayList<WeatherReport>();
     for (Class<?> messageType: Arrays.asList(BalancingTransaction.class,
                                              ClearedTrade.class,
                                              DistributionTransaction.class,
@@ -182,7 +180,7 @@ implements MarketManager, Initializable, Activatable
    */
   public void handleMessage (MarketPosition posn)
   {
-    master.getBroker().addMarketPosition(posn, posn.getTimeslot());
+    master.getBroker().addMarketPosition(posn, posn.getTimeslotIndex());
   }
   
   /**
@@ -192,11 +190,11 @@ implements MarketManager, Initializable, Activatable
   public void handleMessage (MarketTransaction tx)
   {
     // reset price escalation when a trade fully clears.
-    Order lastTry = lastOrder.get(tx.getTimeslot());
+    Order lastTry = lastOrder.get(tx.getTimeslotIndex());
     if (lastTry == null) // should not happen
       log.error("order corresponding to market tx " + tx + " is null");
     else if (tx.getMWh() == lastTry.getMWh()) // fully cleared
-      lastOrder.put(tx.getTimeslot(), null);
+      lastOrder.put(tx.getTimeslotIndex(), null);
   }
   
   /**
@@ -236,11 +234,11 @@ implements MarketManager, Initializable, Activatable
     for (Timeslot timeslot : timeslotRepo.enabledTimeslots()) {
       int index = (timeslot.getSerialNumber()) % master.getUsageRecordLength();
       neededKWh = portfolioManager.collectUsage(index);
-      submitOrder(neededKWh, timeslot);
+      submitOrder(neededKWh, timeslot.getSerialNumber());
     }
   }
 
-  private void submitOrder (double neededKWh, Timeslot timeslot)
+  private void submitOrder (double neededKWh, int timeslot)
   {
     double neededMWh = neededKWh / 1000.0;
     
@@ -249,14 +247,14 @@ implements MarketManager, Initializable, Activatable
     if (posn != null)
       neededMWh -= posn.getOverallBalance();
     log.debug("needed mWh=" + neededMWh +
-              ", timeslot " + timeslot.getSerialNumber());
+              ", timeslot " + timeslot);
     if (Math.abs(neededMWh) <= minMWh) {
-      log.info("no power required in timeslot " + timeslot.getSerialNumber());
+      log.info("no power required in timeslot " + timeslot);
       return;
     }
     Double limitPrice = computeLimitPrice(timeslot, neededMWh);
     log.info("new order for " + neededMWh + " at " + limitPrice +
-             " in timeslot " + timeslot.getSerialNumber());
+             " in timeslot " + timeslot);
     Order order = new Order(master.getBroker(), timeslot, neededMWh, limitPrice);
     lastOrder.put(timeslot, order);
     master.sendMessage(order);
@@ -265,11 +263,11 @@ implements MarketManager, Initializable, Activatable
   /**
    * Computes a limit price with a random element. 
    */
-  private Double computeLimitPrice (Timeslot timeslot,
+  private Double computeLimitPrice (int timeslot,
                                     double amountNeeded)
   {
     log.debug("Compute limit for " + amountNeeded + 
-              ", timeslot " + timeslot.getSerialNumber());
+              ", timeslot " + timeslot);
     // start with default limits
     Double oldLimitPrice;
     double minPrice;
@@ -297,9 +295,8 @@ implements MarketManager, Initializable, Activatable
     // set price between oldLimitPrice and maxPrice, according to number of
     // remaining chances we have to get what we need.
     double newLimitPrice = minPrice; // default value
-    Timeslot current = timeslotRepo.currentTimeslot();
-    int remainingTries = (timeslot.getSerialNumber()
-                          - current.getSerialNumber()
+    int current = timeslotRepo.currentSerialNumber();
+    int remainingTries = (timeslot - current
                           - Competition.currentCompetition().getDeactivateTimeslotsAhead());
     log.debug("remainingTries: " + remainingTries);
     if (remainingTries > 0) {

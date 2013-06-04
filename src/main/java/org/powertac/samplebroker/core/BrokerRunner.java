@@ -60,12 +60,14 @@ public class BrokerRunner
             parser.accepts("queue-name").withRequiredArg().ofType(String.class);
     OptionSpec<String> serverQueueOption =
             parser.accepts("server-queue").withRequiredArg().ofType(String.class);
+    parser.accepts("no-ntp");
 
     // do the parse
     OptionSet options = parser.parse(args);
 
     File configFile = null;
     String jmsUrl = null;
+    boolean noNtp = false;
     String queueName = null;
     String serverQueue = null;
     Integer repeatCount = 1;
@@ -81,6 +83,10 @@ public class BrokerRunner
       if (options.has(jmsUrlOption)) {
         jmsUrl = options.valueOf(jmsUrlOption);
         System.out.println("  jms-url=" + jmsUrl);
+      }
+      if (options.has("no-ntp")) {
+        noNtp = true;
+        System.out.println("  no ntp - estimate offset");
       }
       if (options.has(repeatCountOption)) {
         repeatCount = options.valueOf(repeatCountOption);
@@ -122,7 +128,7 @@ public class BrokerRunner
         context.registerShutdownHook();
         broker = (PowerTacBroker)context.getBeansOfType(PowerTacBroker.class).values().toArray()[0];
         System.out.println("Starting session " + counter);
-        broker.startSession(configFile, jmsUrl, queueName, serverQueue, end);
+        broker.startSession(configFile, jmsUrl, noNtp, queueName, serverQueue, end);
         if (null != repeatCount)
           repeatCount -= 1;
       }

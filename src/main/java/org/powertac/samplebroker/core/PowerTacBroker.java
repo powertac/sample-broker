@@ -42,6 +42,7 @@ import org.powertac.common.msg.SimStart;
 import org.powertac.common.msg.TimeslotComplete;
 import org.powertac.common.msg.TimeslotUpdate;
 import org.powertac.common.repo.CustomerRepo;
+import org.powertac.common.repo.DomainRepo;
 import org.powertac.common.repo.TimeslotRepo;
 import org.powertac.common.spring.SpringApplicationContext;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -131,10 +132,11 @@ implements BrokerContext
   private String brokerQueueName = null; // set by tournament manager
 
   // synchronization variables
+  private boolean noNtp = false; // true if we should attempt offset estimate
   private long brokerTime = 0l;
   private long serverClockOffset = 0l; // should stay zero for ntp situation
-  private long maxResponseDelay = 800l; // <800msec delay is "immediate"
-  private long defaultResponseTime = 50l;
+  //private long maxResponseDelay = 400l; // <800msec delay is "immediate"
+  private long defaultResponseTime = 100l;
 
   // needed for backward compatibility
   private String jmsBrokerUrl = null;
@@ -149,11 +151,13 @@ implements BrokerContext
 
   /**
    * Starts a new session
+   * @param noNtp 
    */
-  public void startSession (File configFile, String jmsUrl,
+  public void startSession (File configFile, String jmsUrl, boolean noNtp,
                             String queueName, String serverQueue, long end)
   {
     quittingTime = end;
+    this.noNtp = noNtp; 
     if (null != queueName && !queueName.isEmpty())
       brokerQueueName = queueName;
     if (null != serverQueue&& !serverQueue.isEmpty())
@@ -181,7 +185,15 @@ implements BrokerContext
 
     // Set up components
     brokerNames = new ArrayList<String>();
-    
+
+    // initialize repos
+    List<DomainRepo> repos =
+            SpringApplicationContext.listBeansOfType(DomainRepo.class);
+    log.debug("found " + repos.size() + " repos");
+    for (DomainRepo repo : repos) {
+      repo.recycle();
+    }
+
     // initialize services
     List<Initializable> initializers =
         SpringApplicationContext.listBeansOfType(Initializable.class);
@@ -387,26 +399,30 @@ implements BrokerContext
     // estimate time offset
     long now = new Date().getTime();
     long response = now - brokerTime;
-    if (response < maxResponseDelay) {
+    //if (response < maxResponseDelay) {
       // assume the response was halfway between login and now
-      now -= response / 2;
-    }
-    else {
+    //  now -= response / 2;
+    //}
+    //else {
       // assume default response time
       now -= defaultResponseTime;
+    //}
+    if (noNtp) {
+      // Rough clock offset calculation
+      if (0l != accept.getServerTime()) {
+        // ignore missing data for backward compatibility
+        serverClockOffset = accept.getServerTime() - now;
+        if (Math.abs(serverClockOffset) < defaultResponseTime) {
+          // assume ntp is working
+          serverClockOffset = 0l;
+        }
+      }
+      else {
+        log.info("Server does not provide system time - cannot adjust offset");
+      }
+      log.info("login response = " + response
+               + ", server clock offset = " + serverClockOffset);
     }
-    if (0l != accept.getServerTime()) {
-      // ignore missing data for backward compatibility
-      serverClockOffset = accept.getServerTime() - now;
-      if (Math.abs(serverClockOffset) < defaultResponseTime / 2) // magic number
-        // assume ntp is working
-        serverClockOffset = 0l;
-    }
-    else {
-      log.info("Server does not provide system time - cannot adjust offset");
-    }
-    log.info("login response = " + response
-             + ", server clock offset = " + serverClockOffset);
     notifyAll();
   }
   
@@ -499,17 +515,13 @@ implements BrokerContext
     for (int index = old.getSerialNumber();
          index < tu.getFirstEnabled();
          index ++) {
-      Timeslot closed = 
-          timeslotRepo.findOrCreateBySerialNumber(index);
-      //closed.disable();
+      timeslotRepo.findOrCreateBySerialNumber(index);
       currentTimeslot = index;
     }
     for (int index = tu.getFirstEnabled();
          index <= tu.getLastEnabled();
          index++) {
-      Timeslot open =
-          timeslotRepo.findOrCreateBySerialNumber(index);
-      //open.enable();
+      timeslotRepo.findOrCreateBySerialNumber(index);
     }
   }
 
