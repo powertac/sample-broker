@@ -5,7 +5,7 @@
   <artifactId>sample-broker</artifactId>
   <description>standalone or server-resident sample broker implementation</description>
   <groupId>org.powertac</groupId>
-  <version>1.0.0</version>
+  <version>1.0.1-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>sample-broker</name>
@@ -14,7 +14,7 @@
   <parent>
     <groupId>org.powertac</groupId>
     <artifactId>server-master</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1-SNAPSHOT</version>
     <relativePath />
   </parent>
 
