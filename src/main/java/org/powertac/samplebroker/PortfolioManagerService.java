@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012 by the original author
+ * Copyright (c) 2012-2013 by the original author
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,9 @@ import org.powertac.common.Tariff;
 import org.powertac.common.TariffSpecification;
 import org.powertac.common.TariffTransaction;
 import org.powertac.common.TimeService;
+import org.powertac.common.config.ConfigurableValue;
 import org.powertac.common.enumerations.PowerType;
+import org.powertac.common.msg.BalancingControlEvent;
 import org.powertac.common.msg.BalancingOrder;
 import org.powertac.common.msg.CustomerBootstrapData;
 import org.powertac.common.msg.TariffRevoke;
@@ -48,10 +50,17 @@ import org.springframework.stereotype.Service;
 
 /**
  * Handles portfolio-management responsibilities for the broker. This
- * includes 
+ * includes composing and offering tariffs, keeping track of customers and their
+ * usage, monitoring tariff offerings from competing brokers.
+ * 
+ * A more complete broker implementation might split this class into two or
+ * more classes; the keys are to decide which messages each class handles,
+ * what each class does on the activate() method, and what data needs to be
+ * managed and shared.
+ * 
  * @author John Collins
  */
-@Service
+@Service // Spring creates a single instance at startup
 public class PortfolioManagerService 
 implements PortfolioManager, Initializable, Activatable
 {
@@ -59,7 +68,7 @@ implements PortfolioManager, Initializable, Activatable
   
   private BrokerContext broker; // master
   
-  @Autowired
+  @Autowired // Spring fills in these dependencies through a naming convention
   private TimeslotRepo timeslotRepo;
   
   @Autowired
@@ -84,11 +93,21 @@ implements PortfolioManager, Initializable, Activatable
                   HashMap<CustomerInfo, CustomerRecord>> customerSubscriptions;
   private HashMap<PowerType, List<TariffSpecification>> competingTariffs;
 
-  // parameters
+  // Configurable parameters for tariff composition
+  // Override defaults in src/main/resources/config/broker.config
+  // or in top-level config file
+  @ConfigurableValue(valueType = "Double",
+          description = "target profit margin")
   private double defaultMargin = 0.5;
+
+  @ConfigurableValue(valueType = "Double",
+          description = "Fixed cost/kWh")
   private double fixedPerKwh = -0.06;
+
+  @ConfigurableValue(valueType = "Double",
+          description = "Default daily meter charge")
   private double defaultPeriodicPayment = -1.0;
-  
+
   /**
    * Default constructor registers for messages, must be called after 
    * message router is available.
@@ -99,9 +118,9 @@ implements PortfolioManager, Initializable, Activatable
   }
 
   /**
-   * Sets up message handling
+   * Sets up message handling when called during broker setup.
    */
-  @Override
+  @Override // from Initializable
   @SuppressWarnings("unchecked")
   public void initialize (BrokerContext broker)
   {
@@ -114,7 +133,8 @@ implements PortfolioManager, Initializable, Activatable
     for (Class<?> messageType: Arrays.asList(CustomerBootstrapData.class,
                                              TariffSpecification.class,
                                              TariffStatus.class,
-                                             TariffTransaction.class)) {
+                                             TariffTransaction.class,
+                                             BalancingControlEvent.class)) {
       broker.registerMessageHandler(this, messageType);
     }
   }
@@ -301,12 +321,22 @@ implements PortfolioManager, Initializable, Activatable
       record.produceConsume(ttx.getKWh(), ttx.getPostedTime());      
     }
   }
+  
+  /**
+   * Handles a BalancingControlEvent, sent when a BalancingOrder is
+   * exercised by the DU.
+   */
+  public void handleMassage (BalancingControlEvent bce)
+  {
+    log.info("BalancingControlEvent " + bce.getKwh());
+  }
 
   // --------------- activation -----------------
-  /* (non-Javadoc)
-   * @see org.powertac.samplebroker.PortfolioManager#activate()
+  /**
+   * Called after TimeslotComplete msg received. Note that activation order
+   * is non-deterministic.
    */
-  @Override
+  @Override // from Activatable
   public void activate (int timeslotIndex)
   {
     if (customerSubscriptions.size() == 0) {
