@@ -92,7 +92,8 @@ implements Initializable
   }
   
   /**
-   * DistributionReport gives total consumption and production.
+   * DistributionReport gives total consumption and production for the timeslot,
+   * summed across all brokers.
    */
   public void handleMessage (DistributionReport dr)
   {

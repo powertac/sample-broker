@@ -28,7 +28,7 @@ import org.powertac.common.Broker;
  * <li>The underlying org.powertac.common.Broker instance</li>
  * <li>The name of this broker</li>
  * <li>The base time for the current simulation</li>
- * <li>The length of the bootstrap data arrays</li>
+ * <li>The length of common data arrays</li>
  * </ul>
  * @author John Collins
  */
@@ -65,7 +65,8 @@ public interface BrokerContext
   public Instant getBaseTime ();
   
   /**
-   * Returns length of bootstrap data array
+   * Returns length of data array used 
+   * for tracking customer consumption/production
    */
   public int getUsageRecordLength ();
   

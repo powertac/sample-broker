@@ -31,6 +31,7 @@ import org.powertac.common.Orderbook;
 import org.powertac.common.Timeslot;
 import org.powertac.common.WeatherForecast;
 import org.powertac.common.WeatherReport;
+import org.powertac.common.config.ConfigurableValue;
 import org.powertac.common.msg.MarketBootstrapData;
 import org.powertac.common.repo.TimeslotRepo;
 import org.powertac.samplebroker.interfaces.Activatable;
@@ -42,7 +43,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * Handles market interactions on behalf of the master.
+ * Handles market interactions on behalf of the broker.
  * @author John Collins
  */
 @Service
@@ -51,7 +52,7 @@ implements MarketManager, Initializable, Activatable
 {
   static private Logger log = Logger.getLogger(MarketManagerService.class);
   
-  private BrokerContext master; // master
+  private BrokerContext broker; // broker
   
   @Autowired
   private TimeslotRepo timeslotRepo;
@@ -59,22 +60,38 @@ implements MarketManager, Initializable, Activatable
   @Autowired
   private PortfolioManager portfolioManager;
 
-  // local state
-  private Random randomGen = new Random();
-  
+  // ------------ Configurable parameters --------------
   // max and min offer prices. Max means "sure to trade"
+  @ConfigurableValue(valueType = "Double",
+          description = "Upper end (least negative) of bid price range")
   private double buyLimitPriceMax = -1.0;  // broker pays
+
+  @ConfigurableValue(valueType = "Double",
+          description = "Lower end (most negative) of bid price range")
   private double buyLimitPriceMin = -70.0;  // broker pays
+
+  @ConfigurableValue(valueType = "Double",
+          description = "Upper end (most positive) of ask price range")
   private double sellLimitPriceMax = 70.0;    // other broker pays
+
+  @ConfigurableValue(valueType = "Double",
+          description = "Lower end (least positive) of ask price range")
   private double sellLimitPriceMin = 0.5;    // other broker pays
+
+  @ConfigurableValue(valueType = "Double",
+          description = "Minimum bid/ask quantity in MWh")
   private double minMWh = 0.001; // don't worry about 1 KWh or less
+
+  // ---------------- local state ------------------
+  private Random randomGen = new Random();
 
   // Bid recording
   private HashMap<Integer, Order> lastOrder;
-  //private HashMap<Integer, ArrayList<MarketTransaction>> marketTxMap;
   private double[] marketMWh;
   private double[] marketPrice;
   private double meanMarketPrice = 0.0;
+
+  //private HashMap<Integer, ArrayList<MarketTransaction>> marketTxMap;
   //private ArrayList<WeatherReport> weather;
 
   public MarketManagerService ()
@@ -89,7 +106,7 @@ implements MarketManager, Initializable, Activatable
   @Override
   public void initialize (BrokerContext broker)
   {
-    this.master = broker;
+    this.broker = broker;
     lastOrder = new HashMap<Integer, Order>();
     //marketTxMap = new HashMap<Integer, ArrayList<MarketTransaction>>();
     //weather = new ArrayList<WeatherReport>();
@@ -149,22 +166,22 @@ implements MarketManager, Initializable, Activatable
    */
   public void handleMessage (MarketBootstrapData data)
   {
-    marketMWh = new double[master.getUsageRecordLength()];
-    marketPrice = new double[master.getUsageRecordLength()];
+    marketMWh = new double[broker.getUsageRecordLength()];
+    marketPrice = new double[broker.getUsageRecordLength()];
     double totalUsage = 0.0;
     double totalValue = 0.0;
     for (int i = 0; i < data.getMwh().length; i++) {
       totalUsage += data.getMwh()[i];
       totalValue += data.getMarketPrice()[i] * data.getMwh()[i];
-      if (i < master.getUsageRecordLength()) {
+      if (i < broker.getUsageRecordLength()) {
         // first pass, just copy the data
         marketMWh[i] = data.getMwh()[i];
         marketPrice[i] = data.getMarketPrice()[i];
       }
       else {
         // subsequent passes, accumulate mean values
-        int pass = i / master.getUsageRecordLength();
-        int index = i % master.getUsageRecordLength();
+        int pass = i / broker.getUsageRecordLength();
+        int index = i % broker.getUsageRecordLength();
         marketMWh[index] =
             (marketMWh[index] * pass + data.getMwh()[i]) / (pass + 1);
         marketPrice[index] =
@@ -180,7 +197,7 @@ implements MarketManager, Initializable, Activatable
    */
   public void handleMessage (MarketPosition posn)
   {
-    master.getBroker().addMarketPosition(posn, posn.getTimeslotIndex());
+    broker.getBroker().addMarketPosition(posn, posn.getTimeslotIndex());
   }
   
   /**
@@ -232,7 +249,7 @@ implements MarketManager, Initializable, Activatable
     double neededKWh = 0.0;
     log.debug("Current timeslot is " + timeslotRepo.currentTimeslot().getSerialNumber());
     for (Timeslot timeslot : timeslotRepo.enabledTimeslots()) {
-      int index = (timeslot.getSerialNumber()) % master.getUsageRecordLength();
+      int index = (timeslot.getSerialNumber()) % broker.getUsageRecordLength();
       neededKWh = portfolioManager.collectUsage(index);
       submitOrder(neededKWh, timeslot.getSerialNumber());
     }
@@ -243,7 +260,7 @@ implements MarketManager, Initializable, Activatable
     double neededMWh = neededKWh / 1000.0;
     
     MarketPosition posn =
-        master.getBroker().findMarketPositionByTimeslot(timeslot);
+        broker.getBroker().findMarketPositionByTimeslot(timeslot);
     if (posn != null)
       neededMWh -= posn.getOverallBalance();
     log.debug("needed mWh=" + neededMWh +
@@ -255,9 +272,9 @@ implements MarketManager, Initializable, Activatable
     Double limitPrice = computeLimitPrice(timeslot, neededMWh);
     log.info("new order for " + neededMWh + " at " + limitPrice +
              " in timeslot " + timeslot);
-    Order order = new Order(master.getBroker(), timeslot, neededMWh, limitPrice);
+    Order order = new Order(broker.getBroker(), timeslot, neededMWh, limitPrice);
     lastOrder.put(timeslot, order);
-    master.sendMessage(order);
+    broker.sendMessage(order);
   }
 
   /**

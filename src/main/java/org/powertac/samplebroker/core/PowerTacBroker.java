@@ -90,12 +90,15 @@ implements BrokerContext
   // keep in mind that brokers need to deal with two viewpoints. Tariff
   // types take the viewpoint of the customer, while market-related types
   // take the viewpoint of the broker.
+
+  @ConfigurableValue(valueType = "Integer",
+          description = "length of customer usage records")
   private int usageRecordLength = 7 * 24; // one week
-  
+
   @ConfigurableValue(valueType = "Integer",
       description = "Login retry timeout in msec")
   private Integer loginRetryTimeout = 3000; // 3 sec
-  
+
   @ConfigurableValue(valueType = "Integer",
           description = "Time limit in msec to retry logins before giving up")
   private Integer retryTimeLimit = 180000; // 3 min
@@ -272,7 +275,7 @@ implements BrokerContext
       return;
 
     // start the activation thread
-    BrokerRunner runner = new BrokerRunner(this);
+    AgentRunner runner = new AgentRunner(this);
     runner.start();
     try {
       runner.join();
@@ -579,12 +582,12 @@ implements BrokerContext
    * Thread to encapsulate internal broker operations, allowing JMS threads
    * to return quickly and stay in sync with the server. 
    */
-  class BrokerRunner extends Thread
+  class AgentRunner extends Thread
   {
     PowerTacBroker parent;
     int timeslotIndex = 0;
 
-    public BrokerRunner (PowerTacBroker parent)
+    public AgentRunner (PowerTacBroker parent)
     {
       super();
       this.parent = parent;
