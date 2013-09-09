@@ -134,6 +134,7 @@ implements PortfolioManager, Initializable, Activatable
                                              TariffSpecification.class,
                                              TariffStatus.class,
                                              TariffTransaction.class,
+                                             TariffRevoke.class,
                                              BalancingControlEvent.class)) {
       broker.registerMessageHandler(this, messageType);
     }
@@ -321,7 +322,21 @@ implements PortfolioManager, Initializable, Activatable
       record.produceConsume(ttx.getKWh(), ttx.getPostedTime());      
     }
   }
-  
+
+  /**
+   * Handles a TariffRevoke message from the server, indicating that some
+   * tariff has been revoked.
+   */
+  public void handleMessage (TariffRevoke tr)
+  {
+    Broker source = tr.getBroker();
+    log.info("Revoke tariff " + tr.getTariffId()
+             + " from " + tr.getBroker().getUsername());
+    if (source != broker.getBroker()) {
+      log.info("clear out competing tariff");
+    }
+  }
+
   /**
    * Handles a BalancingControlEvent, sent when a BalancingOrder is
    * exercised by the DU.
