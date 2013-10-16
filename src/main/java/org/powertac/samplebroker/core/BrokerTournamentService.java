@@ -114,6 +114,7 @@ public class BrokerTournamentService
       String finalUrl = tsUrl + "?" + restAuthToken + "&" + restTourneyName + "&"
               + restResponseType;
       log.info("Connecting to TS with " + finalUrl);
+      log.info("Tournament : " + this.tourneyName);
 
       URL url = new URL(finalUrl);
       URLConnection conn = url.openConnection();
@@ -223,6 +224,8 @@ public class BrokerTournamentService
       while (maxTry > 0 &&
               (quittingTime == 0l || new Date().getTime() < quittingTime)) {
         System.out.println("Connecting to TS at " + tsUrl);
+        System.out.println("Tournament : " + tourneyName);
+
         if (loginMaybe(tsUrl)) {
           log.info("Login Successful!");
           return true;
