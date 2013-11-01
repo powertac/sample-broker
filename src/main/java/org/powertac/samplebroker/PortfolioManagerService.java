@@ -66,7 +66,7 @@ implements PortfolioManager, Initializable, Activatable
 {
   static private Logger log = Logger.getLogger(PortfolioManagerService.class);
   
-  private BrokerContext broker; // master
+  private BrokerContext brokerContext; // master
   
   @Autowired // Spring fills in these dependencies through a naming convention
   private TimeslotRepo timeslotRepo;
@@ -122,9 +122,9 @@ implements PortfolioManager, Initializable, Activatable
    */
   @Override // from Initializable
   @SuppressWarnings("unchecked")
-  public void initialize (BrokerContext broker)
+  public void initialize (BrokerContext context)
   {
-    this.broker = broker;
+    this.brokerContext = context;
     customerProfiles = new HashMap<PowerType,
         HashMap<CustomerInfo, CustomerRecord>>();
     customerSubscriptions = new HashMap<TariffSpecification,
@@ -136,7 +136,7 @@ implements PortfolioManager, Initializable, Activatable
                                              TariffTransaction.class,
                                              TariffRevoke.class,
                                              BalancingControlEvent.class)) {
-      broker.registerMessageHandler(this, messageType);
+      context.registerMessageHandler(this, messageType);
     }
   }
   
@@ -247,12 +247,13 @@ implements PortfolioManager, Initializable, Activatable
 
   /**
    * Handles a TariffSpecification. These are sent out when new tariffs are
-   * published. If it's not ours, then it's a competitor.
+   * published. If it's not ours, then it's a competitor. We keep track of 
+   * competing tariffs locally, and we also store them in the tariffRepo.
    */
   public void handleMessage (TariffSpecification spec)
   {
     Broker theBroker = spec.getBroker();
-    if (broker.getBrokerUsername() == theBroker.getUsername()) {
+    if (brokerContext.getBrokerUsername() == theBroker.getUsername()) {
       // if it's ours, just log it
       TariffSpecification original =
               tariffRepo.findSpecificationById(spec.getId());
@@ -263,6 +264,7 @@ implements PortfolioManager, Initializable, Activatable
     else {
       // otherwise, keep track
       addCompetingTariff(spec);
+      tariffRepo.addSpecification(spec);
     }
   }
   
@@ -332,8 +334,16 @@ implements PortfolioManager, Initializable, Activatable
     Broker source = tr.getBroker();
     log.info("Revoke tariff " + tr.getTariffId()
              + " from " + tr.getBroker().getUsername());
-    if (source != broker.getBroker()) {
+    // if it's from some other broker, we need to remove it from the
+    // tariffRepo, and from the competingTariffs list
+    if (source != brokerContext.getBroker()) {
       log.info("clear out competing tariff");
+      TariffSpecification original =
+              tariffRepo.findSpecificationById(tr.getTariffId());
+      tariffRepo.removeSpecification(original.getId());
+      List<TariffSpecification> candidates =
+              competingTariffs.get(original.getPowerType());
+      candidates.remove(original);
     }
   }
 
@@ -383,7 +393,7 @@ implements PortfolioManager, Initializable, Activatable
       if (pt.isInterruptible())
         rateValue *= 0.7; // Magic number!! price break for interruptible
       TariffSpecification spec =
-          new TariffSpecification(broker.getBroker(), pt)
+          new TariffSpecification(brokerContext.getBroker(), pt)
               .withPeriodicPayment(defaultPeriodicPayment);
       Rate rate = new Rate().withValue(rateValue);
       if (pt.isInterruptible()) {
@@ -393,7 +403,7 @@ implements PortfolioManager, Initializable, Activatable
       spec.addRate(rate);
       customerSubscriptions.put(spec, new HashMap<CustomerInfo, CustomerRecord>());
       tariffRepo.addSpecification(spec);
-      broker.sendMessage(spec);
+      brokerContext.sendMessage(spec);
     }
   }
 
@@ -403,13 +413,14 @@ implements PortfolioManager, Initializable, Activatable
     // quick magic-number hack to inject a balancing order
     int timeslotIndex = timeslotRepo.currentTimeslot().getSerialNumber();
     if (371 == timeslotIndex) {
-      for (TariffSpecification spec : tariffRepo.findAllTariffSpecifications()) {
+      for (TariffSpecification spec :
+           tariffRepo.findTariffSpecificationsByBroker(brokerContext.getBroker())) {
         if (PowerType.INTERRUPTIBLE_CONSUMPTION == spec.getPowerType()) {
-          BalancingOrder order = new BalancingOrder(broker.getBroker(),
+          BalancingOrder order = new BalancingOrder(brokerContext.getBroker(),
                                                     spec, 
                                                     0.5,
                                                     spec.getRates().get(0).getMinValue() * 0.9);
-          broker.sendMessage(order);
+          brokerContext.sendMessage(order);
         }
       }
     }
@@ -428,17 +439,17 @@ implements PortfolioManager, Initializable, Activatable
       double rateValue = oldc.getRates().get(0).getValue();
       // create a new CONSUMPTION tariff
       TariffSpecification spec =
-              new TariffSpecification(broker.getBroker(), PowerType.CONSUMPTION)
+              new TariffSpecification(brokerContext.getBroker(), PowerType.CONSUMPTION)
                   .withPeriodicPayment(defaultPeriodicPayment * 1.1);
       Rate rate = new Rate().withValue(rateValue);
       spec.addRate(rate);
       if (null != oldc)
         spec.addSupersedes(oldc.getId());
       tariffRepo.addSpecification(spec);
-      broker.sendMessage(spec);
+      brokerContext.sendMessage(spec);
       // revoke the old one
-      TariffRevoke revoke = new TariffRevoke(broker.getBroker(), oldc);
-      broker.sendMessage(revoke);
+      TariffRevoke revoke = new TariffRevoke(brokerContext.getBroker(), oldc);
+      brokerContext.sendMessage(revoke);
     }
   }
 
@@ -499,14 +510,14 @@ implements PortfolioManager, Initializable, Activatable
     {
       super();
       this.customer = customer;
-      this.usage = new double[broker.getUsageRecordLength()];
+      this.usage = new double[brokerContext.getUsageRecordLength()];
     }
     
     CustomerRecord (CustomerRecord oldRecord)
     {
       super();
       this.customer = oldRecord.customer;
-      this.usage = Arrays.copyOf(oldRecord.usage, broker.getUsageRecordLength());
+      this.usage = Arrays.copyOf(oldRecord.usage, brokerContext.getUsageRecordLength());
     }
     
     // Returns the CustomerInfo for this record
