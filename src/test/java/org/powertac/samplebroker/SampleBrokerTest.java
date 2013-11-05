@@ -27,6 +27,7 @@ import org.powertac.common.Competition;
 import org.powertac.common.CustomerInfo;
 import org.powertac.common.IdGenerator;
 import org.powertac.common.msg.BrokerAccept;
+import org.powertac.common.repo.BrokerRepo;
 import org.powertac.common.repo.CustomerRepo;
 import org.powertac.common.spring.SpringApplicationContext;
 import org.powertac.samplebroker.core.MessageDispatcher;
@@ -45,7 +46,8 @@ public class SampleBrokerTest
 
   private PowerTacBroker broker;
   private CustomerRepo customerRepo;
-  
+  private BrokerRepo brokerRepo;
+
   @Before
   public void setUp () throws Exception
   {
@@ -54,7 +56,7 @@ public class SampleBrokerTest
 
     // initialize the broker under test
     broker = new PowerTacBroker();
-    
+
     // set up the autowired dependencies
     ApplicationContext ctx = mock(ApplicationContext.class);
     SpringApplicationContext sac = new SpringApplicationContext();
@@ -63,6 +65,8 @@ public class SampleBrokerTest
     ReflectionTestUtils.setField(broker, "router", messageDispatcher);
     customerRepo = new CustomerRepo();
     ReflectionTestUtils.setField(broker, "customerRepo", customerRepo);
+    brokerRepo = new BrokerRepo();
+    ReflectionTestUtils.setField(broker, "brokerRepo", brokerRepo);
     ReflectionTestUtils.setField(broker, "username", "Sample");
 
     broker.init();
@@ -95,7 +99,7 @@ public class SampleBrokerTest
   @Test
   public void testReceiveCompetition ()
   {
-    assertEquals("initially, no brokers", 0, broker.getBrokerList().size());
+    assertEquals("initially, no competing brokers", 1, broker.getBrokerList().size());
     // set up a competition
     Competition comp = Competition.newInstance("Test")
         .withSimulationBaseTime(baseTime)
@@ -106,12 +110,12 @@ public class SampleBrokerTest
         .addCustomer(new CustomerInfo("Metro", 100000));
     // send without first enabling
     broker.getBroker().receiveMessage(comp);
-    assertEquals("still no brokers", 0, broker.getBrokerList().size());
+    assertEquals("still no competing brokers", 1, broker.getBrokerList().size());
     // enable the broker
     broker.getBroker().receiveMessage(new BrokerAccept(3));
     // send to broker and check
     broker.getBroker().receiveMessage(comp);
-    assertEquals("2 brokers", 2, broker.getBrokerList().size());
-    assertEquals("3 customers", 3, customerRepo.count());
+    assertEquals("2 competing brokers", 3, broker.getBrokerList().size());
+    assertEquals("3 customers", 3, customerRepo.size());
   }
 }

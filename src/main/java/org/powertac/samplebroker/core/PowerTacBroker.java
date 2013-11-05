@@ -16,7 +16,6 @@
 package org.powertac.samplebroker.core;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -41,6 +40,7 @@ import org.powertac.common.msg.SimResume;
 import org.powertac.common.msg.SimStart;
 import org.powertac.common.msg.TimeslotComplete;
 import org.powertac.common.msg.TimeslotUpdate;
+import org.powertac.common.repo.BrokerRepo;
 import org.powertac.common.repo.CustomerRepo;
 import org.powertac.common.repo.DomainRepo;
 import org.powertac.common.repo.TimeslotRepo;
@@ -60,26 +60,29 @@ public class PowerTacBroker
 implements BrokerContext
 {
   static private Logger log = Logger.getLogger(PowerTacBroker.class);
-  
+
   @Autowired
   private BrokerPropertiesService propertiesService;
-  
+
   @Autowired
   private TimeService timeService;
-  
+
   @Autowired
   private TimeslotRepo timeslotRepo;
+
+  @Autowired
+  private BrokerRepo brokerRepo;
 
   // Broker components
   @Autowired
   private MessageDispatcher router;
-  
+
   @Autowired
   private JmsManagementService jmsManagementService;
-  
+
   @Autowired
   private BrokerTournamentService brokerTournamentService;
-  
+
   @Autowired
   private BrokerMessageReceiver brokerMessageReceiver;
 
@@ -93,7 +96,7 @@ implements BrokerContext
 
   @ConfigurableValue(valueType = "Integer",
           description = "length of customer usage records")
-  private int usageRecordLength = 7 * 24; // one week
+  private Integer usageRecordLength = 7 * 24; // one week
 
   @ConfigurableValue(valueType = "Integer",
       description = "Login retry timeout in msec")
@@ -124,7 +127,7 @@ implements BrokerContext
   private String authToken = "";
 
   // Broker keeps its own records
-  private ArrayList<String> brokerNames;
+  //private ArrayList<String> brokerNames;
   private Instant baseTime = null;
   private long quittingTime = 0l;
   private int currentTimeslot = 0; // index of last started timeslot
@@ -184,11 +187,6 @@ implements BrokerContext
   @SuppressWarnings("unchecked")
   public void init ()
   {
-    adapter = new BrokerAdapter(username);
-
-    // Set up components
-    brokerNames = new ArrayList<String>();
-
     // initialize repos
     List<DomainRepo> repos =
             SpringApplicationContext.listBeansOfType(DomainRepo.class);
@@ -196,6 +194,10 @@ implements BrokerContext
     for (DomainRepo repo : repos) {
       repo.recycle();
     }
+
+    // set up the adapter
+    adapter = new BrokerAdapter(username);
+    brokerRepo.add(adapter); // to resolve incoming messages correctly
 
     // initialize services
     List<Initializable> initializers =
@@ -329,7 +331,7 @@ implements BrokerContext
   @Override
   public List<String> getBrokerList ()
   {
-    return brokerNames;
+    return brokerRepo.findRetailBrokerNames();
   }
 
   /**
@@ -370,7 +372,6 @@ implements BrokerContext
   public void sendMessage (Object message)
   {
     if (message != null) {
-      //brokerProxyService.routeMessage(message);
       router.sendMessage(message);
     }
   }
@@ -444,7 +445,11 @@ implements BrokerContext
       customerRepo.add(customer);
     }
     for (String brokerName : comp.getBrokers()) {
-      brokerNames.add(brokerName);
+      if (!(brokerName.equals(adapter.getUsername()))) {
+        Broker competitor = new Broker(brokerName);
+        log.info("adding competitor " + brokerName);
+        brokerRepo.add(competitor);
+      }
     }
     // in a remote broker, we pull out the clock
     // parameters to init the local clock, and create the initial timeslots.
@@ -485,7 +490,6 @@ implements BrokerContext
    */
   public void handleMessage (SimStart ss)
   {
-    // local brokers don't need to do anything with this.
     log.info("SimStart - start time is " + ss.getStart().toString());
     timeService.setStart(ss.getStart().getMillis() - serverClockOffset);
     timeService.updateTime();
@@ -497,7 +501,6 @@ implements BrokerContext
    */
   public synchronized void handleMessage (SimEnd se)
   {
-    // local brokers can ignore this
     log.info("SimEnd received");
     running = false;
     notifyAll();

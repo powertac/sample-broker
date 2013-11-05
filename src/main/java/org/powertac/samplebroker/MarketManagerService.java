@@ -34,6 +34,7 @@ import org.powertac.common.WeatherReport;
 import org.powertac.common.config.ConfigurableValue;
 import org.powertac.common.msg.MarketBootstrapData;
 import org.powertac.common.repo.TimeslotRepo;
+import org.powertac.samplebroker.core.BrokerPropertiesService;
 import org.powertac.samplebroker.interfaces.Activatable;
 import org.powertac.samplebroker.interfaces.BrokerContext;
 import org.powertac.samplebroker.interfaces.Initializable;
@@ -53,7 +54,11 @@ implements MarketManager, Initializable, Activatable
   static private Logger log = Logger.getLogger(MarketManagerService.class);
   
   private BrokerContext broker; // broker
-  
+
+  // Spring fills in Autowired dependencies through a naming convention
+  @Autowired
+  private BrokerPropertiesService propertiesService;
+
   @Autowired
   private TimeslotRepo timeslotRepo;
   
@@ -108,6 +113,7 @@ implements MarketManager, Initializable, Activatable
   {
     this.broker = broker;
     lastOrder = new HashMap<Integer, Order>();
+    propertiesService.configureMe(this);
     //marketTxMap = new HashMap<Integer, ArrayList<MarketTransaction>>();
     //weather = new ArrayList<WeatherReport>();
     for (Class<?> messageType: Arrays.asList(BalancingTransaction.class,

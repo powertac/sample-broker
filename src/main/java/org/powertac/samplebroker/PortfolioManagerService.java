@@ -26,7 +26,6 @@ import org.powertac.common.Broker;
 import org.powertac.common.Competition;
 import org.powertac.common.CustomerInfo;
 import org.powertac.common.Rate;
-import org.powertac.common.Tariff;
 import org.powertac.common.TariffSpecification;
 import org.powertac.common.TariffTransaction;
 import org.powertac.common.TimeService;
@@ -40,6 +39,7 @@ import org.powertac.common.msg.TariffStatus;
 import org.powertac.common.repo.CustomerRepo;
 import org.powertac.common.repo.TariffRepo;
 import org.powertac.common.repo.TimeslotRepo;
+import org.powertac.samplebroker.core.BrokerPropertiesService;
 import org.powertac.samplebroker.interfaces.Activatable;
 import org.powertac.samplebroker.interfaces.BrokerContext;
 import org.powertac.samplebroker.interfaces.Initializable;
@@ -67,19 +67,23 @@ implements PortfolioManager, Initializable, Activatable
   static private Logger log = Logger.getLogger(PortfolioManagerService.class);
   
   private BrokerContext brokerContext; // master
-  
-  @Autowired // Spring fills in these dependencies through a naming convention
+
+  // Spring fills in Autowired dependencies through a naming convention
+  @Autowired
+  private BrokerPropertiesService propertiesService;
+
+  @Autowired
   private TimeslotRepo timeslotRepo;
-  
+
   @Autowired
   private TariffRepo tariffRepo;
-  
+
   @Autowired
   private CustomerRepo customerRepo;
-  
+
   @Autowired
   private MarketManager marketManager;
-  
+
   @Autowired
   private TimeService timeService;
 
@@ -125,6 +129,7 @@ implements PortfolioManager, Initializable, Activatable
   public void initialize (BrokerContext context)
   {
     this.brokerContext = context;
+    propertiesService.configureMe(this);
     customerProfiles = new HashMap<PowerType,
         HashMap<CustomerInfo, CustomerRecord>>();
     customerSubscriptions = new HashMap<TariffSpecification,
@@ -253,7 +258,10 @@ implements PortfolioManager, Initializable, Activatable
   public void handleMessage (TariffSpecification spec)
   {
     Broker theBroker = spec.getBroker();
-    if (brokerContext.getBrokerUsername() == theBroker.getUsername()) {
+    if (brokerContext.getBrokerUsername().equals(theBroker.getUsername())) {
+      if (theBroker != brokerContext)
+        // strange bug, seems harmless for now
+        log.info("Resolution failed for broker " + theBroker.getUsername());
       // if it's ours, just log it
       TariffSpecification original =
               tariffRepo.findSpecificationById(spec.getId());
@@ -336,13 +344,21 @@ implements PortfolioManager, Initializable, Activatable
              + " from " + tr.getBroker().getUsername());
     // if it's from some other broker, we need to remove it from the
     // tariffRepo, and from the competingTariffs list
-    if (source != brokerContext.getBroker()) {
+    if (!(source.getUsername().equals(brokerContext.getBrokerUsername()))) {
       log.info("clear out competing tariff");
       TariffSpecification original =
               tariffRepo.findSpecificationById(tr.getTariffId());
+      if (null == original) {
+        log.warn("Original tariff " + tr.getTariffId() + " not found");
+        return;
+      }
       tariffRepo.removeSpecification(original.getId());
       List<TariffSpecification> candidates =
               competingTariffs.get(original.getPowerType());
+      if (null == candidates) {
+        log.warn("Candidate list is null");
+        return;
+      }
       candidates.remove(original);
     }
   }

@@ -95,7 +95,7 @@ implements ApplicationContextAware
     
     // set up the classpath props
     try {
-      Resource[] xmlResources = context.getResources("classpath*:/**/properties.xml");
+      Resource[] xmlResources = context.getResources("classpath*:config/properties.xml");
       for (Resource xml : xmlResources) {
         if (validXmlResource(xml)) {
           log.info("loading config from " + xml.getURI());
@@ -104,7 +104,7 @@ implements ApplicationContextAware
           config.addConfiguration(xconfig);
         }
       }
-      Resource[] propResources = context.getResources("classpath*:*.properties");
+      Resource[] propResources = context.getResources("classpath*:config/*.properties");
       for (Resource prop : propResources) {
         if (validPropResource(prop)) {
           log.info("loading config from " + prop.getURI());
@@ -143,7 +143,7 @@ implements ApplicationContextAware
   public void configureMe (Object target)
   {
     lazyInit();
-    configurator.configureSingleton(target);    
+    configurator.configureSingleton(target);
   }
  
   public Collection<?> configureInstances (Class<?> target)
