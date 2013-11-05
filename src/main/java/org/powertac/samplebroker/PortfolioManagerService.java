@@ -122,7 +122,8 @@ implements PortfolioManager, Initializable, Activatable
   }
 
   /**
-   * Sets up message handling when called during broker setup.
+   * Per-game initialization. Configures parameters and registers
+   * message handlers.
    */
   @Override // from Initializable
   @SuppressWarnings("unchecked")
@@ -251,8 +252,8 @@ implements PortfolioManager, Initializable, Activatable
   }
 
   /**
-   * Handles a TariffSpecification. These are sent out when new tariffs are
-   * published. If it's not ours, then it's a competitor. We keep track of 
+   * Handles a TariffSpecification. These are sent by the server when new tariffs are
+   * published. If it's not ours, then it's a competitor's tariff. We keep track of 
    * competing tariffs locally, and we also store them in the tariffRepo.
    */
   public void handleMessage (TariffSpecification spec)
@@ -262,7 +263,7 @@ implements PortfolioManager, Initializable, Activatable
       if (theBroker != brokerContext)
         // strange bug, seems harmless for now
         log.info("Resolution failed for broker " + theBroker.getUsername());
-      // if it's ours, just log it
+      // if it's ours, just log it, because we already put it in the repo
       TariffSpecification original =
               tariffRepo.findSpecificationById(spec.getId());
       if (null == original)
@@ -270,14 +271,15 @@ implements PortfolioManager, Initializable, Activatable
       log.info("published " + spec);
     }
     else {
-      // otherwise, keep track
+      // otherwise, keep track of competing tariffs, and record in the repo
       addCompetingTariff(spec);
       tariffRepo.addSpecification(spec);
     }
   }
   
   /**
-   * Handles a TariffStatus message.
+   * Handles a TariffStatus message. This should do something when the status
+   * is not SUCCESS.
    */
   public void handleMessage (TariffStatus ts)
   {
@@ -375,13 +377,13 @@ implements PortfolioManager, Initializable, Activatable
   // --------------- activation -----------------
   /**
    * Called after TimeslotComplete msg received. Note that activation order
-   * is non-deterministic.
+   * among modules is non-deterministic.
    */
   @Override // from Activatable
   public void activate (int timeslotIndex)
   {
     if (customerSubscriptions.size() == 0) {
-      // we have no tariffs
+      // we (most likely) have no tariffs
       createInitialTariffs();
     }
     else {

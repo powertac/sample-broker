@@ -88,7 +88,7 @@ implements MarketManager, Initializable, Activatable
   private double minMWh = 0.001; // don't worry about 1 KWh or less
 
   // ---------------- local state ------------------
-  private Random randomGen = new Random();
+  private Random randomGen = new Random(); // to randomize bid/ask prices
 
   // Bid recording
   private HashMap<Integer, Order> lastOrder;
@@ -243,10 +243,10 @@ implements MarketManager, Initializable, Activatable
   }
 
   // ----------- per-timeslot activation ---------------
-  
-  // Finally, once we have a full week of records, we use the data for
-  // the hour and day-of-week.
-  /* (non-Javadoc)
+
+  /**
+   * Compute needed quantities for each open timeslot, then submit orders
+   * for those quantities.
    * @see org.powertac.samplebroker.MarketManager#activate()
    */
   @Override
@@ -261,10 +261,13 @@ implements MarketManager, Initializable, Activatable
     }
   }
 
+  /**
+   * Composes and submits the appropriate order for the given timeslot.
+   */
   private void submitOrder (double neededKWh, int timeslot)
   {
     double neededMWh = neededKWh / 1000.0;
-    
+
     MarketPosition posn =
         broker.getBroker().findMarketPositionByTimeslot(timeslot);
     if (posn != null)
