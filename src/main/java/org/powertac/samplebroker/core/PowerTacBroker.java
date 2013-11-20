@@ -128,10 +128,11 @@ implements BrokerContext
 
   // Broker keeps its own records
   //private ArrayList<String> brokerNames;
-  private Instant baseTime = null;
+  //private Instant baseTime = null;
   private long quittingTime = 0l;
   private int currentTimeslot = 0; // index of last started timeslot
   private int timeslotCompleted = 0; // index of last completed timeslot
+  private int pausedAt = 0; // index of current timeslot during pause, else 0
   private boolean running = false; // true to run, false to stop
   private BrokerAdapter adapter;
   private String serverQueueName = "serverInput";
@@ -313,7 +314,7 @@ implements BrokerContext
   @Override
   public Instant getBaseTime()
   {
-    return baseTime;
+    return timeService.getBaseInstant();
   }
 
   /**
@@ -465,11 +466,13 @@ implements BrokerContext
 
   /**
    * Receives the SimPause message, used to pause the clock.
+   * While the clock is paused, the broker needs to ignore the local clock.
    */
   public void handleMessage (SimPause sp)
   {
     // local brokers can ignore this.
     log.info("Paused at " + timeService.getCurrentDateTime().toString());
+    pausedAt = timeslotRepo.currentSerialNumber();
   }
 
   /**
@@ -479,6 +482,7 @@ implements BrokerContext
   {
     // local brokers don't need to handle this
     log.info("Resumed");
+    pausedAt = 0;
     timeService.setStart(sr.getStart().getMillis() - serverClockOffset);
     timeService.updateTime();
   }
@@ -544,6 +548,7 @@ implements BrokerContext
     }
     else {
       // missed a timeslot
+      timeslotCompleted = timeslotRepo.currentSerialNumber();
       log.warn("Skipped timeslot " + tc.getTimeslotIndex());
     }
   }
@@ -578,6 +583,11 @@ implements BrokerContext
     catch (InterruptedException ie) {
       log.warn("activation interrupted: " + ie);
     }
+    return timeslotCompleted;
+  }
+
+  protected int getTimeslotCompleted ()
+  {
     return timeslotCompleted;
   }
 
