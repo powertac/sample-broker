@@ -15,8 +15,6 @@
  */
 package org.powertac.samplebroker;
 
-import java.util.Arrays;
-
 import org.apache.log4j.Logger;
 import org.joda.time.Instant;
 import org.powertac.common.BankTransaction;
@@ -55,18 +53,19 @@ implements Initializable
   private double cash = 0;
   
 
-  @SuppressWarnings("unchecked")
+//  @SuppressWarnings("unchecked")
   @Override
   public void initialize (BrokerContext broker)
   {
     master = broker;
-    for (Class<?> clazz: Arrays.asList(BankTransaction.class,
-                                       CashPosition.class,
-                                       DistributionReport.class,
-                                       Competition.class,
-                                       java.util.Properties.class)) {
-      broker.registerMessageHandler(this, clazz);
-    }    
+// --- no longer needed ---
+//    for (Class<?> clazz: Arrays.asList(BankTransaction.class,
+//                                       CashPosition.class,
+//                                       DistributionReport.class,
+//                                       Competition.class,
+//                                       java.util.Properties.class)) {
+//      broker.registerMessageHandler(this, clazz);
+//    }    
   }
 
   // -------------------- message handlers ---------------------

@@ -15,7 +15,7 @@
  */
 package org.powertac.samplebroker;
 
-import java.util.Arrays;
+//import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
 
@@ -107,7 +107,7 @@ implements MarketManager, Initializable, Activatable
   /* (non-Javadoc)
    * @see org.powertac.samplebroker.MarketManager#init(org.powertac.samplebroker.SampleBroker)
    */
-  @SuppressWarnings("unchecked")
+//  @SuppressWarnings("unchecked")
   @Override
   public void initialize (BrokerContext broker)
   {
@@ -116,17 +116,18 @@ implements MarketManager, Initializable, Activatable
     propertiesService.configureMe(this);
     //marketTxMap = new HashMap<Integer, ArrayList<MarketTransaction>>();
     //weather = new ArrayList<WeatherReport>();
-    for (Class<?> messageType: Arrays.asList(BalancingTransaction.class,
-                                             ClearedTrade.class,
-                                             DistributionTransaction.class,
-                                             MarketBootstrapData.class,
-                                             MarketPosition.class,
-                                             MarketTransaction.class,
-                                             Orderbook.class,
-                                             WeatherForecast.class,
-                                             WeatherReport.class)) {
-      broker.registerMessageHandler(this, messageType);
-    }
+// --- no longer needed ---
+//    for (Class<?> messageType: Arrays.asList(BalancingTransaction.class,
+//                                             ClearedTrade.class,
+//                                             DistributionTransaction.class,
+//                                             MarketBootstrapData.class,
+//                                             MarketPosition.class,
+//                                             MarketTransaction.class,
+//                                             Orderbook.class,
+//                                             WeatherForecast.class,
+//                                             WeatherReport.class)) {
+//      broker.registerMessageHandler(this, messageType);
+//    }
   }
   
   // ----------------- data access -------------------

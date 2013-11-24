@@ -16,6 +16,7 @@
 package org.powertac.samplebroker.core;
 
 import java.io.File;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -205,18 +206,27 @@ implements BrokerContext
         SpringApplicationContext.listBeansOfType(Initializable.class);
     for (Initializable svc : initializers) {
       svc.initialize(this);
+      registerMessageHandlers(svc);
     }
 
-    // register message handlers
-    for (Class<?> clazz: Arrays.asList(BrokerAccept.class,
-                                       Competition.class,
-                                       SimEnd.class,
-                                       SimPause.class,
-                                       SimResume.class,
-                                       SimStart.class,
-                                       TimeslotComplete.class,
-                                       TimeslotUpdate.class)) {
-      router.registerMessageHandler(this, clazz);
+    // register message handlers for the broker core also
+    registerMessageHandlers(this);
+  }
+
+  /**
+   * Finds all the handleMessage() methdods and registers them.
+   */
+  private void registerMessageHandlers (Object thing)
+  {
+    Class<?> thingClass = thing.getClass();
+    Method[] methods = thingClass.getMethods();
+    for (Method method : methods) {
+      if (method.getName().equals("handleMessage")) {
+        Class<?>[] args = method.getParameterTypes();
+        if (1 == args.length) {
+          router.registerMessageHandler(thing, args[0]);
+        }
+      }
     }
   }
 

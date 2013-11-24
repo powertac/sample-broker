@@ -126,7 +126,7 @@ implements PortfolioManager, Initializable, Activatable
    * message handlers.
    */
   @Override // from Initializable
-  @SuppressWarnings("unchecked")
+//  @SuppressWarnings("unchecked")
   public void initialize (BrokerContext context)
   {
     this.brokerContext = context;
@@ -136,14 +136,15 @@ implements PortfolioManager, Initializable, Activatable
     customerSubscriptions = new HashMap<TariffSpecification,
         HashMap<CustomerInfo, CustomerRecord>>();
     competingTariffs = new HashMap<PowerType, List<TariffSpecification>>();
-    for (Class<?> messageType: Arrays.asList(CustomerBootstrapData.class,
-                                             TariffSpecification.class,
-                                             TariffStatus.class,
-                                             TariffTransaction.class,
-                                             TariffRevoke.class,
-                                             BalancingControlEvent.class)) {
-      context.registerMessageHandler(this, messageType);
-    }
+// --- no longer needed ---
+//    for (Class<?> messageType: Arrays.asList(CustomerBootstrapData.class,
+//                                             TariffSpecification.class,
+//                                             TariffStatus.class,
+//                                             TariffTransaction.class,
+//                                             TariffRevoke.class,
+//                                             BalancingControlEvent.class)) {
+//      context.registerMessageHandler(this, messageType);
+//    }
   }
   
   // -------------- data access ------------------
