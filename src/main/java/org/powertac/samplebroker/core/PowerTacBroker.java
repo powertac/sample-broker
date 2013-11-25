@@ -224,6 +224,8 @@ implements BrokerContext
       if (method.getName().equals("handleMessage")) {
         Class<?>[] args = method.getParameterTypes();
         if (1 == args.length) {
+          log.info("Register " + thing.getClass().getSimpleName()
+                   + ".handleMessage(" + args[0].getSimpleName() + ")");
           router.registerMessageHandler(thing, args[0]);
         }
       }

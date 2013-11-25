@@ -136,15 +136,6 @@ implements PortfolioManager, Initializable, Activatable
     customerSubscriptions = new HashMap<TariffSpecification,
         HashMap<CustomerInfo, CustomerRecord>>();
     competingTariffs = new HashMap<PowerType, List<TariffSpecification>>();
-// --- no longer needed ---
-//    for (Class<?> messageType: Arrays.asList(CustomerBootstrapData.class,
-//                                             TariffSpecification.class,
-//                                             TariffStatus.class,
-//                                             TariffTransaction.class,
-//                                             TariffRevoke.class,
-//                                             BalancingControlEvent.class)) {
-//      context.registerMessageHandler(this, messageType);
-//    }
   }
   
   // -------------- data access ------------------
@@ -247,7 +238,7 @@ implements PortfolioManager, Initializable, Activatable
     int subs = record.subscribedPopulation;
     record.subscribedPopulation = customer.getPopulation();
     for (int i = 0; i < cbd.getNetUsage().length; i++) {
-      record.produceConsume(cbd.getNetUsage()[i], i + offset);
+      record.produceConsume(cbd.getNetUsage()[i], i);
     }
     record.subscribedPopulation = subs;
   }
@@ -370,7 +361,7 @@ implements PortfolioManager, Initializable, Activatable
    * Handles a BalancingControlEvent, sent when a BalancingOrder is
    * exercised by the DU.
    */
-  public void handleMassage (BalancingControlEvent bce)
+  public void handleMessage (BalancingControlEvent bce)
   {
     log.info("BalancingControlEvent " + bce.getKwh());
   }

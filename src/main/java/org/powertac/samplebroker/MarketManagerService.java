@@ -116,18 +116,6 @@ implements MarketManager, Initializable, Activatable
     propertiesService.configureMe(this);
     //marketTxMap = new HashMap<Integer, ArrayList<MarketTransaction>>();
     //weather = new ArrayList<WeatherReport>();
-// --- no longer needed ---
-//    for (Class<?> messageType: Arrays.asList(BalancingTransaction.class,
-//                                             ClearedTrade.class,
-//                                             DistributionTransaction.class,
-//                                             MarketBootstrapData.class,
-//                                             MarketPosition.class,
-//                                             MarketTransaction.class,
-//                                             Orderbook.class,
-//                                             WeatherForecast.class,
-//                                             WeatherReport.class)) {
-//      broker.registerMessageHandler(this, messageType);
-//    }
   }
   
   // ----------------- data access -------------------
@@ -273,8 +261,6 @@ implements MarketManager, Initializable, Activatable
         broker.getBroker().findMarketPositionByTimeslot(timeslot);
     if (posn != null)
       neededMWh -= posn.getOverallBalance();
-    log.debug("needed mWh=" + neededMWh +
-              ", timeslot " + timeslot);
     if (Math.abs(neededMWh) <= minMWh) {
       log.info("no power required in timeslot " + timeslot);
       return;

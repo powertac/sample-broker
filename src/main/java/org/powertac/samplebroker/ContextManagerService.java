@@ -88,6 +88,7 @@ implements Initializable
   public void handleMessage (CashPosition cp)
   {
     cash = cp.getBalance();
+    log.info("Cash position: " + cash);
   }
   
   /**
