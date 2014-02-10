@@ -17,6 +17,7 @@ package org.powertac.samplebroker.core;
 
 import static org.powertac.util.MessageDispatcher.dispatch;
 
+import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -27,6 +28,7 @@ import javax.jms.Session;
 import javax.jms.TextMessage;
 
 import org.apache.log4j.Logger;
+import org.powertac.common.IdGenerator;
 import org.powertac.common.XMLMessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jms.core.JmsTemplate;
@@ -110,6 +112,8 @@ public class MessageDispatcher
    */
   public void sendMessage(Object message)
   {
+    if (!validateId(message))
+      return;
     final String text = key + converter.toXML(message);
     log.info("sending text: \n" + text);
 
@@ -122,6 +126,37 @@ public class MessageDispatcher
         return message;
       }
     });
+  }
+
+  private boolean validateId (Object thing)
+  {
+    try {
+      Field idField = thing.getClass().getDeclaredField("id");
+      idField.setAccessible(true);
+      long value = idField.getLong(thing);
+      if (IdGenerator.getPrefix() != IdGenerator.extractPrefix(value)) {
+        log.error("Invalid id value " + value + " in message "
+                  + thing.toString());
+        return false;
+      }
+    }
+    catch (NoSuchFieldException e) {
+      // no id field, OK to send
+      return true;
+    }
+    catch (SecurityException e) {
+      // Should not happen
+      log.error("Exception accessing id field: " + e.toString());
+    }
+    catch (IllegalArgumentException e) {
+      // Should not happen
+      log.error("Exception reading id field: " + e.toString());
+    }
+    catch (IllegalAccessException e) {
+      // Should not happen
+      log.error("Exception reading id field: " + e.toString());
+    }
+    return true;
   }
 
   // test-support
