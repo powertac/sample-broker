@@ -439,27 +439,39 @@ implements PortfolioManager, Initializable, Activatable
       // find the existing CONSUMPTION tariff
       TariffSpecification oldc = null;
       List<TariffSpecification> candidates =
-              tariffRepo.findTariffSpecificationsByPowerType(PowerType.CONSUMPTION);
+        tariffRepo.findTariffSpecificationsByBroker(brokerContext.getBroker());
       if (null == candidates || 0 == candidates.size())
-        log.error("No CONSUMPTION tariffs found");
+        log.error("No tariffs found for broker");
       else {
-        oldc = candidates.get(0);
+        // oldc = candidates.get(0);
+        for (TariffSpecification candidate: candidates) {
+          if (candidate.getPowerType() == PowerType.CONSUMPTION) {
+            oldc = candidate;
+            break;
+          }
+        }
+        if (null == oldc) {
+          log.warn("No CONSUMPTION tariffs found");
+        }
+        else {
+          double rateValue = oldc.getRates().get(0).getValue();
+          // create a new CONSUMPTION tariff
+          TariffSpecification spec =
+            new TariffSpecification(brokerContext.getBroker(),
+                                    PowerType.CONSUMPTION)
+                .withPeriodicPayment(defaultPeriodicPayment * 1.1);
+          Rate rate = new Rate().withValue(rateValue);
+          spec.addRate(rate);
+          if (null != oldc)
+            spec.addSupersedes(oldc.getId());
+          tariffRepo.addSpecification(spec);
+          brokerContext.sendMessage(spec);
+          // revoke the old one
+          TariffRevoke revoke =
+            new TariffRevoke(brokerContext.getBroker(), oldc);
+          brokerContext.sendMessage(revoke);
+        }
       }
-
-      double rateValue = oldc.getRates().get(0).getValue();
-      // create a new CONSUMPTION tariff
-      TariffSpecification spec =
-              new TariffSpecification(brokerContext.getBroker(), PowerType.CONSUMPTION)
-                  .withPeriodicPayment(defaultPeriodicPayment * 1.1);
-      Rate rate = new Rate().withValue(rateValue);
-      spec.addRate(rate);
-      if (null != oldc)
-        spec.addSupersedes(oldc.getId());
-      tariffRepo.addSpecification(spec);
-      brokerContext.sendMessage(spec);
-      // revoke the old one
-      TariffRevoke revoke = new TariffRevoke(brokerContext.getBroker(), oldc);
-      brokerContext.sendMessage(revoke);
     }
   }
 
