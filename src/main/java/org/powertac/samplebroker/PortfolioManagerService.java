@@ -15,36 +15,17 @@
  */
 package org.powertac.samplebroker;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-
 import org.apache.log4j.Logger;
 import org.joda.time.Instant;
-import org.powertac.common.Broker;
-import org.powertac.common.Competition;
-import org.powertac.common.CustomerInfo;
-import org.powertac.common.Rate;
-import org.powertac.common.TariffSpecification;
-import org.powertac.common.TariffTransaction;
-import org.powertac.common.TimeService;
+import org.powertac.common.*;
 import org.powertac.common.config.ConfigurableValue;
 import org.powertac.common.enumerations.PowerType;
-import org.powertac.common.msg.BalancingControlEvent;
-import org.powertac.common.msg.BalancingOrder;
-import org.powertac.common.msg.CustomerBootstrapData;
-import org.powertac.common.msg.TariffRevoke;
-import org.powertac.common.msg.TariffStatus;
+import org.powertac.common.msg.*;
 import org.powertac.common.repo.CustomerRepo;
 import org.powertac.common.repo.TariffRepo;
 import org.powertac.common.repo.TimeslotRepo;
 import org.powertac.samplebroker.core.BrokerPropertiesService;
-import org.powertac.samplebroker.interfaces.Activatable;
-import org.powertac.samplebroker.interfaces.BrokerContext;
-import org.powertac.samplebroker.interfaces.Initializable;
-import org.powertac.samplebroker.interfaces.MarketManager;
-import org.powertac.samplebroker.interfaces.PortfolioManager;
+import org.powertac.samplebroker.interfaces.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -573,7 +554,11 @@ implements PortfolioManager, Initializable, Activatable
     void produceConsume (double kwh, int rawIndex)
     {
       int index = getIndex(rawIndex);
-      double kwhPerCustomer = kwh / (double)subscribedPopulation;
+      double kwhPerCustomer = 0.0;
+      if (subscribedPopulation != 0) {
+        kwhPerCustomer = kwh / (double) subscribedPopulation;
+      }
+
       double oldUsage = usage[index];
       if (oldUsage == 0.0) {
         // assume this is the first time
