@@ -15,6 +15,7 @@
  */
 package org.powertac.samplebroker;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -25,6 +26,7 @@ import org.joda.time.Instant;
 import org.powertac.common.Broker;
 import org.powertac.common.Competition;
 import org.powertac.common.CustomerInfo;
+import org.powertac.common.IdGenerator;
 import org.powertac.common.Rate;
 import org.powertac.common.TariffSpecification;
 import org.powertac.common.TariffTransaction;
@@ -464,6 +466,7 @@ implements PortfolioManager, Initializable, Activatable
           spec.addRate(rate);
           if (null != oldc)
             spec.addSupersedes(oldc.getId());
+          mungId(spec, 6);
           tariffRepo.addSpecification(spec);
           brokerContext.sendMessage(spec);
           // revoke the old one
@@ -472,6 +475,41 @@ implements PortfolioManager, Initializable, Activatable
           brokerContext.sendMessage(revoke);
         }
       }
+    }
+  }
+
+  private void mungId (TariffSpecification spec, int i)
+  {
+    long id = spec.getId();
+    long baseId =
+      id - IdGenerator.extractPrefix(id) * IdGenerator.getMultiplier();
+    Field idField = findIdField(spec.getClass());
+    try {
+      idField.setAccessible(true);
+      idField.setLong(spec, baseId + i * IdGenerator.getMultiplier());
+    }
+    catch (Exception e) {
+      log.error(e.toString());
+    }
+  }
+  
+  private Field findIdField (Class<?> clazz)
+  {
+    try {
+      Field idField = clazz.getDeclaredField("id");
+      return idField;
+    }
+    catch (NoSuchFieldException e) {
+      Class<?> superclass = clazz.getSuperclass();
+      if (null == superclass) {
+        return null;
+      }
+      return findIdField(superclass);
+    }
+    catch (SecurityException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+      return null;
     }
   }
 
@@ -573,7 +611,10 @@ implements PortfolioManager, Initializable, Activatable
     void produceConsume (double kwh, int rawIndex)
     {
       int index = getIndex(rawIndex);
-      double kwhPerCustomer = kwh / (double)subscribedPopulation;
+      double kwhPerCustomer = 0.0;
+      if (subscribedPopulation > 0) {
+        kwhPerCustomer = kwh / (double)subscribedPopulation;
+      }
       double oldUsage = usage[index];
       if (oldUsage == 0.0) {
         // assume this is the first time
