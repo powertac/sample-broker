@@ -15,11 +15,6 @@
  */
 package org.powertac.samplebroker.core;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.util.Collection;
-
 import org.apache.commons.configuration.CompositeConfiguration;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
@@ -32,6 +27,10 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Collection;
 
 /**
  * @author jcollins
@@ -199,6 +198,11 @@ implements ApplicationContextAware
   private boolean validXmlResource (Resource xml)
   {
     try {
+      xml.getInputStream();
+      return true;
+
+      /* TODO Doesn't seem to work with files inside a jar?
+      Jar is added to the classpath, and then the
       String path = xml.getFile().getPath();
       for (String regex : excludedPaths) {
         if (path.matches(regex)) {
@@ -206,6 +210,7 @@ implements ApplicationContextAware
         }
       }
       return true;
+      */
     }
     catch (IOException e) {
       log.error("Should not happen: " + e.toString());
