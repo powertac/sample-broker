@@ -15,18 +15,12 @@
  */
 package org.powertac.samplebroker.core;
 
-//import org.apache.log4j.Logger;
-import org.springframework.context.support.AbstractApplicationContext;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
-
 /**
  * This is the top level of the Power TAC server.
  * @author John Collins
  */
-public class BrokerMain
+public class BrokerMain implements Runnable
 {
-  //static private Logger log = Logger.getLogger(BrokerMain.class);
-
   /**
    * Sets up the broker. Single command-line arg is the username
    */
@@ -34,8 +28,26 @@ public class BrokerMain
   {
     BrokerRunner runner = new BrokerRunner();
     runner.processCmdLine(args);
-    
+
     // if we get here, it's time to exit
     System.exit(0);
+  }
+
+  private static String[] mainArgs;
+
+  public static void mainMatlab (String[] args)
+  {
+    // This is some dirty hacking because Matlab doesn't load jars properly
+    ClassPathHacker.loadJarDynamically();
+
+    mainArgs = args;
+    Thread t = new Thread( new BrokerMain() );
+    t.start();
+  }
+
+  public void run()
+  {
+    BrokerRunner runner = new BrokerRunner();
+    runner.processCmdLine(mainArgs);
   }
 }

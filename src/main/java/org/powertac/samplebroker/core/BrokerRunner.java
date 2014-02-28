@@ -15,20 +15,21 @@
  */
 package org.powertac.samplebroker.core;
 
-import java.io.File;
-import java.util.Date;
-import java.util.Enumeration;
-
 import joptsimple.OptionException;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
-
 import org.apache.log4j.Appender;
 import org.apache.log4j.FileAppender;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
 import org.springframework.context.support.AbstractApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+
+import java.io.File;
+import java.util.Date;
+import java.util.Enumeration;
 
 /**
  * Multi-session broker runner. The Spring context is re-built for each
@@ -115,7 +116,7 @@ public class BrokerRunner
 
         // Re-open the logfiles
         reopenLogs(counter);
-        
+
         // initialize and run
         if (null == context) {
           context = new ClassPathXmlApplicationContext("broker.xml");
@@ -126,7 +127,7 @@ public class BrokerRunner
         }
         // get the broker reference and delegate the rest
         context.registerShutdownHook();
-        broker = (PowerTacBroker)context.getBeansOfType(PowerTacBroker.class).values().toArray()[0];
+        broker = (PowerTacBroker) context.getBeansOfType(PowerTacBroker.class).values().toArray()[0];
         System.out.println("Starting session " + counter);
         broker.startSession(configFile, jmsUrl, noNtp, queueName, serverQueue, end);
         if (null != repeatCount)
@@ -144,17 +145,53 @@ public class BrokerRunner
     Logger root = Logger.getRootLogger();
     @SuppressWarnings("unchecked")
     Enumeration<Appender> rootAppenders = root.getAllAppenders();
-    FileAppender logOutput = (FileAppender) rootAppenders.nextElement();
-    // assume there's only the one, and that it's a file appender
-    logOutput.setFile("log/broker" + counter + ".trace");
-    logOutput.activateOptions();
-    
+    FileAppender logOutput;
+
+    try {
+      logOutput = (FileAppender) rootAppenders.nextElement();
+      // assume there's only the one, and that it's a file appender
+      logOutput.setFile("log/broker" + counter + ".trace");
+      logOutput.activateOptions();
+    }
+    catch (Exception ignored) {
+      try {
+        PatternLayout layout = new PatternLayout("%r %-5p %c{2}: %m%n");
+        String fileName = "log/broker" + counter + ".trace";
+        logOutput = new FileAppender(layout, fileName);
+        logOutput.activateOptions();
+        root.addAppender(logOutput);
+
+        root.setLevel(Level.WARN);
+      }
+      catch (Exception ignored2) {
+        // TODO What?
+      }
+    }
+
     Logger state = Logger.getLogger("State");
     @SuppressWarnings("unchecked")
     Enumeration<Appender> stateAppenders = state.getAllAppenders();
-    FileAppender stateOutput = (FileAppender) stateAppenders.nextElement();
-    // assume there's only the one, and that it's a file appender
-    stateOutput.setFile("log/broker" + counter + ".state");
-    stateOutput.activateOptions();
+    FileAppender stateOutput;
+
+    try {
+      stateOutput = (FileAppender) stateAppenders.nextElement();
+      // assume there's only the one, and that it's a file appender
+      stateOutput.setFile("log/broker" + counter + ".state");
+      stateOutput.activateOptions();
+    }
+    catch (Exception ignored) {
+      try {
+        PatternLayout layout = new PatternLayout("%r::%m%n");
+        String fileName = "log/broker" + counter + ".state";
+        stateOutput = new FileAppender(layout, fileName);
+        stateOutput.activateOptions();
+        state.addAppender(stateOutput);
+
+        state.setLevel(Level.INFO);
+      }
+      catch (Exception ignored2) {
+        // TODO What?
+      }
+    }
   }
 }
