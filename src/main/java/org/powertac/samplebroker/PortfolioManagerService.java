@@ -528,6 +528,7 @@ implements PortfolioManager, Initializable, Activatable
 //    }
 //  }
 
+  // finds a field in superclass hierarchy
 //  private Field findIdField (Class<?> clazz)
 //  {
 //    try {
