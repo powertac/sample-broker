@@ -26,6 +26,7 @@ import org.powertac.common.Broker;
 import org.powertac.common.Competition;
 import org.powertac.common.CustomerInfo;
 import org.powertac.common.Rate;
+import org.powertac.common.RegulationRate;
 import org.powertac.common.TariffSpecification;
 import org.powertac.common.TariffTransaction;
 import org.powertac.common.TimeService;
@@ -400,8 +401,9 @@ implements PortfolioManager, Initializable, Activatable
       else
         //rateValue = (-1.0 * marketPrice / (1.0 + defaultMargin));
         rateValue = -2.0 * marketPrice;
-      if (pt.isInterruptible())
+      if (pt.isInterruptible()) {
         rateValue *= 0.7; // Magic number!! price break for interruptible
+      }
       TariffSpecification spec =
           new TariffSpecification(brokerContext.getBroker(), pt)
               .withPeriodicPayment(defaultPeriodicPayment);
@@ -409,6 +411,13 @@ implements PortfolioManager, Initializable, Activatable
       if (pt.isInterruptible()) {
         // set max curtailment
         rate.withMaxCurtailment(0.1);
+      }
+      if (pt.isStorage()) {
+        // add a RegulationRate
+        RegulationRate rr = new RegulationRate();
+        rr.withUpRegulationPayment(-rateValue * 0.5)
+            .withDownRegulationPayment(rateValue * 0.5); // magic numbers
+        spec.addRate(rr);
       }
       spec.addRate(rate);
       customerSubscriptions.put(spec, new HashMap<CustomerInfo, CustomerRecord>());
@@ -431,6 +440,18 @@ implements PortfolioManager, Initializable, Activatable
                                                     0.5,
                                                     spec.getRates().get(0).getMinValue() * 0.9);
           brokerContext.sendMessage(order);
+        }
+        else if (spec.hasRegulationRate()) {
+          // supports both up-regulation and down-regulation
+          RegulationRate rr = spec.getRegulationRates().get(0);
+          double up = -rr.getUpRegulationPayment();
+          double down = -rr.getDownRegulationPayment();
+          BalancingOrder bup = new BalancingOrder(brokerContext.getBroker(),
+                                                 spec, 1.0, up * 0.5);
+          BalancingOrder bdown = new BalancingOrder(brokerContext.getBroker(),
+                                                    spec, -1.0, down * 0.9);
+          brokerContext.sendMessage(bup);
+          brokerContext.sendMessage(bdown);
         }
       }
     }
