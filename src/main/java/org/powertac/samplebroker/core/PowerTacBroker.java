@@ -577,14 +577,17 @@ implements BrokerContext
         long diff = System.currentTimeMillis() - nowStamp;
         if (diff >= maxWait) {
           if (index != 0) {
-          String msg = "worker thread waited more than "
-              + maxWait / 1000 +" secs for server, abandoning game";
-          System.out.println("\n" + msg +"\n");
-          log.warn(msg);
-          running = false;
-          } else if (--remainingTimeouts <= 0) {
-            String msg = "worker thread waited more than "
-                + "720 secs for server, abandoning game";
+            String msg =
+              "worker thread waited more than " + maxWait / 1000
+                  + " secs for server, abandoning game";
+            System.out.println("\n" + msg + "\n");
+            log.warn(msg);
+            running = false;
+          }
+          else if (--remainingTimeouts <= 0) {
+            String msg =
+              "worker thread waited more than "
+                  + "720 secs for server, abandoning game";
             System.out.println("\n" + msg + "\n");
             log.warn(msg);
             running = false;
