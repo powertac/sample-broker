@@ -249,11 +249,11 @@ implements PortfolioManager, Initializable, Activatable
    * published. If it's not ours, then it's a competitor's tariff. We keep track of 
    * competing tariffs locally, and we also store them in the tariffRepo.
    */
-  public void handleMessage (TariffSpecification spec)
+  public synchronized void handleMessage (TariffSpecification spec)
   {
     Broker theBroker = spec.getBroker();
     if (brokerContext.getBrokerUsername().equals(theBroker.getUsername())) {
-      if (theBroker != brokerContext)
+      if (theBroker != brokerContext.getBroker())
         // strange bug, seems harmless for now
         log.info("Resolution failed for broker " + theBroker.getUsername());
       // if it's ours, just log it, because we already put it in the repo
@@ -274,7 +274,7 @@ implements PortfolioManager, Initializable, Activatable
    * Handles a TariffStatus message. This should do something when the status
    * is not SUCCESS.
    */
-  public void handleMessage (TariffStatus ts)
+  public synchronized void handleMessage (TariffStatus ts)
   {
     log.info("TariffStatus: " + ts.getStatus());
   }
@@ -283,7 +283,7 @@ implements PortfolioManager, Initializable, Activatable
    * Handles a TariffTransaction. We only care about certain types: PRODUCE,
    * CONSUME, SIGNUP, and WITHDRAW.
    */
-  public void handleMessage(TariffTransaction ttx)
+  public synchronized void handleMessage(TariffTransaction ttx)
   {
     // make sure we have this tariff
     TariffSpecification newSpec = ttx.getTariffSpec();
@@ -332,7 +332,7 @@ implements PortfolioManager, Initializable, Activatable
    * Handles a TariffRevoke message from the server, indicating that some
    * tariff has been revoked.
    */
-  public void handleMessage (TariffRevoke tr)
+  public synchronized void handleMessage (TariffRevoke tr)
   {
     Broker source = tr.getBroker();
     log.info("Revoke tariff " + tr.getTariffId()
@@ -362,7 +362,7 @@ implements PortfolioManager, Initializable, Activatable
    * Handles a BalancingControlEvent, sent when a BalancingOrder is
    * exercised by the DU.
    */
-  public void handleMessage (BalancingControlEvent bce)
+  public synchronized void handleMessage (BalancingControlEvent bce)
   {
     log.info("BalancingControlEvent " + bce.getKwh());
   }
@@ -373,7 +373,7 @@ implements PortfolioManager, Initializable, Activatable
    * among modules is non-deterministic.
    */
   @Override // from Activatable
-  public void activate (int timeslotIndex)
+  public synchronized void activate (int timeslotIndex)
   {
     if (customerSubscriptions.size() == 0) {
       // we (most likely) have no tariffs

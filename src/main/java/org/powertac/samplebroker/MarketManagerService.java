@@ -142,7 +142,7 @@ implements MarketManager, Initializable, Activatable
   /**
    * Handles a BalancingTransaction message.
    */
-  public void handleMessage (BalancingTransaction tx)
+  public synchronized void handleMessage (BalancingTransaction tx)
   {
     log.info("Balancing tx: " + tx.getCharge());
   }
@@ -151,14 +151,14 @@ implements MarketManager, Initializable, Activatable
    * Handles a ClearedTrade message - this is where you would want to keep
    * track of market prices.
    */
-  public void handleMessage (ClearedTrade ct)
+  public synchronized void handleMessage (ClearedTrade ct)
   {
   }
   
   /**
    * Handles a DistributionTransaction - charges for transporting power
    */
-  public void handleMessage (DistributionTransaction dt)
+  public synchronized void handleMessage (DistributionTransaction dt)
   {
     log.info("Distribution tx: " + dt.getCharge());
   }
@@ -199,7 +199,7 @@ implements MarketManager, Initializable, Activatable
    * Receives a MarketPosition message, representing our commitments on 
    * the wholesale market
    */
-  public void handleMessage (MarketPosition posn)
+  public synchronized void handleMessage (MarketPosition posn)
   {
     broker.getBroker().addMarketPosition(posn, posn.getTimeslotIndex());
   }
@@ -208,7 +208,7 @@ implements MarketManager, Initializable, Activatable
    * Receives a new MarketTransaction. We look to see whether an order we
    * have placed has cleared.
    */
-  public void handleMessage (MarketTransaction tx)
+  public synchronized void handleMessage (MarketTransaction tx)
   {
     // reset price escalation when a trade fully clears.
     Order lastTry = lastOrder.get(tx.getTimeslotIndex());
@@ -221,7 +221,7 @@ implements MarketManager, Initializable, Activatable
   /**
    * Receives the market orderbooks
    */
-  public void handleMessage (Orderbook orderbook)
+  public synchronized void handleMessage (Orderbook orderbook)
   {
     // implement something here.
   }
@@ -229,14 +229,14 @@ implements MarketManager, Initializable, Activatable
   /**
    * Receives a new WeatherForecast.
    */
-  public void handleMessage (WeatherForecast forecast)
+  public synchronized void handleMessage (WeatherForecast forecast)
   {
   }
 
   /**
    * Receives a new WeatherReport.
    */
-  public void handleMessage (WeatherReport report)
+  public synchronized void handleMessage (WeatherReport report)
   {
   }
 
@@ -248,7 +248,7 @@ implements MarketManager, Initializable, Activatable
    * @see org.powertac.samplebroker.MarketManager#activate()
    */
   @Override
-  public void activate (int timeslotIndex)
+  public synchronized void activate (int timeslotIndex)
   {
     double neededKWh = 0.0;
     log.debug("Current timeslot is " + timeslotRepo.currentTimeslot().getSerialNumber());
