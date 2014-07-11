@@ -286,8 +286,10 @@ implements BrokerContext
         }
       }
     }
-    if (!adapter.isEnabled())
+    if (!adapter.isEnabled()) {
+        jmsManagementService.shutdown();
       return;
+    }
 
     // start the activation thread
     AgentRunner runner = new AgentRunner(this);
