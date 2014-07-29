@@ -17,7 +17,6 @@ package org.powertac.samplebroker.core;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.util.Collection;
 
 import org.apache.commons.configuration.CompositeConfiguration;
@@ -107,6 +106,9 @@ implements ApplicationContextAware
       Resource[] propResources = context.getResources("classpath*:config/*.properties");
       for (Resource prop : propResources) {
         if (validPropResource(prop)) {
+          if (null == prop) {
+            log.error("Null resource");
+          }
           log.info("loading config from " + prop.getURI());
           PropertiesConfiguration pconfig = new PropertiesConfiguration();
           pconfig.load(prop.getInputStream());
@@ -115,7 +117,7 @@ implements ApplicationContextAware
       }
     }
     catch (ConfigurationException e) {
-      log.error("Error loading configuration: " + e.toString());
+      log.error("Problem loading configuration: " + e.toString());
     }
     catch (Exception e) {
       log.error("Error loading configuration: " + e.toString());
@@ -199,9 +201,18 @@ implements ApplicationContextAware
   private boolean validXmlResource (Resource xml)
   {
     try {
-      String path = xml.getFile().getPath();
+      log.info("Validating resource " + xml.getURI());
+      String path = xml.getURI().toString();
       for (String regex : excludedPaths) {
         if (path.matches(regex)) {
+          return false;
+        }
+        if (!xml.exists()) {
+          log.warn("Resource " + xml.getURI() + " does not exist");
+          return false;
+        }
+        if (!xml.isReadable()) {
+          log.warn("Resource " + xml.getURI() + " is not readable");
           return false;
         }
       }
@@ -209,6 +220,11 @@ implements ApplicationContextAware
     }
     catch (IOException e) {
       log.error("Should not happen: " + e.toString());
+      return false;
+    }
+    catch (Exception e) {
+      log.error("Validation error " + e.toString());
+      e.printStackTrace();
       return false;
     }
   }
