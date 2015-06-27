@@ -228,7 +228,7 @@ implements PortfolioManager, Initializable, Activatable
    * corresponding to the given customer and power type. This gives the
    * broker a running start.
    */
-  public void handleMessage (CustomerBootstrapData cbd)
+  public synchronized void handleMessage (CustomerBootstrapData cbd)
   {
     CustomerInfo customer =
             customerRepo.findByNameAndPowerType(cbd.getCustomerName(),

@@ -134,7 +134,7 @@ implements MarketManager, Initializable, Activatable
    * Here we capture minimum order size to avoid running into the limit
    * and generating unhelpful error messages.
    */
-  public void handleMessage (Competition comp)
+  public synchronized void handleMessage (Competition comp)
   {
     minMWh = Math.max(minMWh, comp.getMinimumOrderQuantity());
   }
@@ -168,7 +168,7 @@ implements MarketManager, Initializable, Activatable
    * for the bootstrap period. We record the overall weighted mean price,
    * as well as the mean price and usage for a week.
    */
-  public void handleMessage (MarketBootstrapData data)
+  public synchronized void handleMessage (MarketBootstrapData data)
   {
     marketMWh = new double[broker.getUsageRecordLength()];
     marketPrice = new double[broker.getUsageRecordLength()];
