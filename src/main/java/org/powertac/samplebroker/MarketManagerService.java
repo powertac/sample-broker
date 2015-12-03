@@ -19,7 +19,8 @@ package org.powertac.samplebroker;
 import java.util.HashMap;
 import java.util.Random;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import org.powertac.common.BalancingTransaction;
 import org.powertac.common.ClearedTrade;
 import org.powertac.common.Competition;
@@ -51,7 +52,7 @@ import org.springframework.stereotype.Service;
 public class MarketManagerService 
 implements MarketManager, Initializable, Activatable
 {
-  static private Logger log = Logger.getLogger(MarketManagerService.class);
+  static private Logger log = LogManager.getLogger(MarketManagerService.class);
   
   private BrokerContext broker; // broker
 
