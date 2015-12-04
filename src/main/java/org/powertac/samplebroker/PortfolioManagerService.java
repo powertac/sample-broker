@@ -20,7 +20,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import org.joda.time.Instant;
 import org.powertac.common.Broker;
 import org.powertac.common.Competition;
@@ -65,7 +66,7 @@ import org.springframework.stereotype.Service;
 public class PortfolioManagerService 
 implements PortfolioManager, Initializable, Activatable
 {
-  static private Logger log = Logger.getLogger(PortfolioManagerService.class);
+  static private Logger log = LogManager.getLogger(PortfolioManagerService.class);
   
   private BrokerContext brokerContext; // master
 

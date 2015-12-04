@@ -15,7 +15,8 @@
  */
 package org.powertac.samplebroker;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import org.joda.time.Instant;
 import org.powertac.common.BankTransaction;
 import org.powertac.common.CashPosition;
@@ -45,7 +46,7 @@ import org.springframework.stereotype.Service;
 public class ContextManagerService
 implements Initializable
 {
-  static private Logger log = Logger.getLogger(ContextManagerService.class);
+  static private Logger log = LogManager.getLogger(ContextManagerService.class);
 
   BrokerContext master;
 
