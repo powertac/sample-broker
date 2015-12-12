@@ -235,8 +235,6 @@ implements PortfolioManager, Initializable, Activatable
             customerRepo.findByNameAndPowerType(cbd.getCustomerName(),
                                                 cbd.getPowerType());
     CustomerRecord record = getCustomerRecordByPowerType(cbd.getPowerType(), customer);
-    int offset = (timeslotRepo.currentTimeslot().getSerialNumber()
-                  - cbd.getNetUsage().length);
     int subs = record.subscribedPopulation;
     record.subscribedPopulation = customer.getPopulation();
     for (int i = 0; i < cbd.getNetUsage().length; i++) {
