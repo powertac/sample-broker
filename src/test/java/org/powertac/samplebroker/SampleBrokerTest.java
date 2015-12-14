@@ -26,6 +26,7 @@ import org.junit.Test;
 import org.powertac.common.Competition;
 import org.powertac.common.CustomerInfo;
 import org.powertac.common.IdGenerator;
+import org.powertac.common.TimeService;
 import org.powertac.common.msg.BrokerAccept;
 import org.powertac.common.repo.BrokerRepo;
 import org.powertac.common.repo.CustomerRepo;
@@ -65,6 +66,8 @@ public class SampleBrokerTest
     ReflectionTestUtils.setField(broker, "router", messageDispatcher);
     customerRepo = new CustomerRepo();
     ReflectionTestUtils.setField(broker, "customerRepo", customerRepo);
+    TimeService timeService = new TimeService();
+    ReflectionTestUtils.setField(broker, "timeService", timeService);
     brokerRepo = new BrokerRepo();
     ReflectionTestUtils.setField(broker, "brokerRepo", brokerRepo);
     ReflectionTestUtils.setField(broker, "username", "Sample");
