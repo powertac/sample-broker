@@ -395,17 +395,22 @@ implements PortfolioManager, Initializable, Activatable
     for (PowerType pt : customerProfiles.keySet()) {
       // we'll just do fixed-rate tariffs for now
       double rateValue;
-      if (pt.isConsumption())
+      double periodicValue = defaultPeriodicPayment;
+      if (pt.isConsumption()) {
         rateValue = ((marketPrice + fixedPerKwh) * (1.0 + defaultMargin));
-      else
+      }
+      else {
         //rateValue = (-1.0 * marketPrice / (1.0 + defaultMargin));
         rateValue = -2.0 * marketPrice;
+        periodicValue /= 2.0;
+      }
       if (pt.isInterruptible()) {
         rateValue *= 0.7; // Magic number!! price break for interruptible
       }
+      log.info("Tariff {}: rate={}, periodic={}", pt, rateValue, periodicValue);
       TariffSpecification spec =
           new TariffSpecification(brokerContext.getBroker(), pt)
-              .withPeriodicPayment(defaultPeriodicPayment);
+              .withPeriodicPayment(periodicValue);
       Rate rate = new Rate().withValue(rateValue);
       if (pt.isInterruptible()) {
         // set max curtailment
