@@ -41,6 +41,9 @@
     <Logger name="org.powertac.common.XMLMessageConverter" level="warn">
       <AppenderRef ref="LogFile" />
     </Logger>
+    <Logger name="org.springframework.jms.listener" level="fatal">
+      <AppenderRef ref="LogFile" />
+    </Logger>
     
     <Root level="info">
       <AppenderRef ref="LogFile"/>
