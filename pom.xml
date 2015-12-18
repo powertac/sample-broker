@@ -20,7 +20,9 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <exec.args></exec.args>
     <exec.version>1.4.0</exec.version>
-    
+
+    <maven-javadoc.version>2.10.3</maven-javadoc.version>
+
     <shade.version>2.4.2</shade.version>
   </properties>
 
@@ -94,6 +96,19 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+
+      <!-- javadoc config -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>${maven-javadoc.version}</version>
+        <configuration>
+          <includeDependencySources>true</includeDependencySources>
+          <!--  <dependencySourceIncludes>org.powertac.samplebroker.core.*</dependencySourceIncludes> -->
+          <failOnError>false</failOnError>
+          <additionalparam>-Xdoclint:none</additionalparam>
+        </configuration>
       </plugin>
     </plugins>
    </build>
