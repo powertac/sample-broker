@@ -15,7 +15,6 @@
  */
 package org.powertac.samplebroker;
 
-//import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
 
@@ -88,17 +87,18 @@ implements MarketManager, Initializable, Activatable
           description = "Minimum bid/ask quantity in MWh")
   private double minMWh = 0.001; // don't worry about 1 KWh or less
 
+  @ConfigurableValue(valueType = "Integer",
+          description = "If set, seed the random generator")
+  private Integer seedNumber = null;
+
   // ---------------- local state ------------------
-  private Random randomGen = new Random(); // to randomize bid/ask prices
+  private Random randomGen; // to randomize bid/ask prices
 
   // Bid recording
   private HashMap<Integer, Order> lastOrder;
   private double[] marketMWh;
   private double[] marketPrice;
   private double meanMarketPrice = 0.0;
-
-  //private HashMap<Integer, ArrayList<MarketTransaction>> marketTxMap;
-  //private ArrayList<WeatherReport> weather;
 
   public MarketManagerService ()
   {
@@ -108,17 +108,23 @@ implements MarketManager, Initializable, Activatable
   /* (non-Javadoc)
    * @see org.powertac.samplebroker.MarketManager#init(org.powertac.samplebroker.SampleBroker)
    */
-//  @SuppressWarnings("unchecked")
   @Override
   public void initialize (BrokerContext broker)
   {
     this.broker = broker;
-    lastOrder = new HashMap<Integer, Order>();
+    lastOrder = new HashMap<>();
     propertiesService.configureMe(this);
-    //marketTxMap = new HashMap<Integer, ArrayList<MarketTransaction>>();
-    //weather = new ArrayList<WeatherReport>();
+    System.out.println("  name=" + broker.getBrokerUsername());
+    if (seedNumber != null) {
+      System.out.println("  seeding=" + seedNumber);
+      log.info("Seeding with : " + seedNumber);
+      randomGen = new Random(seedNumber);
+    }
+    else {
+      randomGen = new Random();
+    }
   }
-  
+
   // ----------------- data access -------------------
   /**
    * Returns the mean price observed in the market
