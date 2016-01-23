@@ -18,7 +18,9 @@ package org.powertac.samplebroker;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -93,11 +95,11 @@ implements PortfolioManager, Initializable, Activatable
   // Customer records indexed by power type and by tariff. Note that the
   // CustomerRecord instances are NOT shared between these structures, because
   // we need to keep track of subscriptions by tariff.
-  private HashMap<PowerType,
-                  HashMap<CustomerInfo, CustomerRecord>> customerProfiles;
-  private HashMap<TariffSpecification, 
-                  HashMap<CustomerInfo, CustomerRecord>> customerSubscriptions;
-  private HashMap<PowerType, List<TariffSpecification>> competingTariffs;
+  private Map<PowerType,
+      Map<CustomerInfo, CustomerRecord>> customerProfiles;
+  private Map<TariffSpecification,
+      Map<CustomerInfo, CustomerRecord>> customerSubscriptions;
+  private Map<PowerType, List<TariffSpecification>> competingTariffs;
 
   // Configurable parameters for tariff composition
   // Override defaults in src/main/resources/config/broker.config
@@ -128,16 +130,13 @@ implements PortfolioManager, Initializable, Activatable
    * message handlers.
    */
   @Override // from Initializable
-//  @SuppressWarnings("unchecked")
   public void initialize (BrokerContext context)
   {
     this.brokerContext = context;
     propertiesService.configureMe(this);
-    customerProfiles = new HashMap<PowerType,
-        HashMap<CustomerInfo, CustomerRecord>>();
-    customerSubscriptions = new HashMap<TariffSpecification,
-        HashMap<CustomerInfo, CustomerRecord>>();
-    competingTariffs = new HashMap<PowerType, List<TariffSpecification>>();
+    customerProfiles = new LinkedHashMap<>();
+    customerSubscriptions = new LinkedHashMap<>();
+    competingTariffs = new HashMap<>();
   }
   
   // -------------- data access ------------------
@@ -149,10 +148,10 @@ implements PortfolioManager, Initializable, Activatable
   CustomerRecord getCustomerRecordByPowerType (PowerType type,
                                                CustomerInfo customer)
   {
-    HashMap<CustomerInfo, CustomerRecord> customerMap =
+    Map<CustomerInfo, CustomerRecord> customerMap =
         customerProfiles.get(type);
     if (customerMap == null) {
-      customerMap = new HashMap<CustomerInfo, CustomerRecord>();
+      customerMap = new LinkedHashMap<>();
       customerProfiles.put(type, customerMap);
     }
     CustomerRecord record = customerMap.get(customer);
@@ -170,10 +169,10 @@ implements PortfolioManager, Initializable, Activatable
   CustomerRecord getCustomerRecordByTariff (TariffSpecification spec,
                                             CustomerInfo customer)
   {
-    HashMap<CustomerInfo, CustomerRecord> customerMap =
+    Map<CustomerInfo, CustomerRecord> customerMap =
         customerSubscriptions.get(spec);
     if (customerMap == null) {
-      customerMap = new HashMap<CustomerInfo, CustomerRecord>();
+      customerMap = new LinkedHashMap<>();
       customerSubscriptions.put(spec, customerMap);
     }
     CustomerRecord record = customerMap.get(customer);
@@ -215,7 +214,7 @@ implements PortfolioManager, Initializable, Activatable
   public double collectUsage (int index)
   {
     double result = 0.0;
-    for (HashMap<CustomerInfo, CustomerRecord> customerMap : customerSubscriptions.values()) {
+    for (Map<CustomerInfo, CustomerRecord> customerMap : customerSubscriptions.values()) {
       for (CustomerRecord record : customerMap.values()) {
         result += record.getUsage(index);
       }
@@ -424,7 +423,7 @@ implements PortfolioManager, Initializable, Activatable
         spec.addRate(rr);
       }
       spec.addRate(rate);
-      customerSubscriptions.put(spec, new HashMap<CustomerInfo, CustomerRecord>());
+      customerSubscriptions.put(spec, new LinkedHashMap<>());
       tariffRepo.addSpecification(spec);
       brokerContext.sendMessage(spec);
     }
@@ -513,7 +512,7 @@ implements PortfolioManager, Initializable, Activatable
   // test-support method
   HashMap<PowerType, double[]> getRawUsageForCustomer (CustomerInfo customer)
   {
-    HashMap<PowerType, double[]> result = new HashMap<PowerType, double[]>();
+    HashMap<PowerType, double[]> result = new HashMap<>();
     for (PowerType type : customerProfiles.keySet()) {
       CustomerRecord record = customerProfiles.get(type).get(customer);
       if (record != null) {
@@ -526,9 +525,9 @@ implements PortfolioManager, Initializable, Activatable
   // test-support method
   HashMap<String, Integer> getCustomerCounts()
   {
-    HashMap<String, Integer> result = new HashMap<String, Integer>();
+    HashMap<String, Integer> result = new HashMap<>();
     for (TariffSpecification spec : customerSubscriptions.keySet()) {
-      HashMap<CustomerInfo, CustomerRecord> customerMap = customerSubscriptions.get(spec);
+      Map<CustomerInfo, CustomerRecord> customerMap = customerSubscriptions.get(spec);
       for (CustomerRecord record : customerMap.values()) {
         result.put(record.customer.getName() + spec.getPowerType(), 
                     record.subscribedPopulation);
@@ -536,43 +535,6 @@ implements PortfolioManager, Initializable, Activatable
     }
     return result;
   }
-
-  // code to test id-prefix checking
-//  private void mungId (TariffSpecification spec, int i)
-//  {
-//    long id = spec.getId();
-//    long baseId =
-//      id - IdGenerator.extractPrefix(id) * IdGenerator.getMultiplier();
-//    Field idField = findIdField(spec.getClass());
-//    try {
-//      idField.setAccessible(true);
-//      idField.setLong(spec, baseId + i * IdGenerator.getMultiplier());
-//    }
-//    catch (Exception e) {
-//      log.error(e.toString());
-//    }
-//  }
-
-  // finds a field in superclass hierarchy
-//  private Field findIdField (Class<?> clazz)
-//  {
-//    try {
-//      Field idField = clazz.getDeclaredField("id");
-//      return idField;
-//    }
-//    catch (NoSuchFieldException e) {
-//      Class<?> superclass = clazz.getSuperclass();
-//      if (null == superclass) {
-//        return null;
-//      }
-//      return findIdField(superclass);
-//    }
-//    catch (SecurityException e) {
-//      // Auto-generated catch block
-//      e.printStackTrace();
-//      return null;
-//    }
-//  }
 
   //-------------------- Customer-model recording ---------------------
   /**
