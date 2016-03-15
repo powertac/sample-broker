@@ -394,7 +394,6 @@ implements PortfolioManager, Initializable, Activatable
     for (PowerType pt : customerProfiles.keySet()) {
       // we'll just do fixed-rate tariffs for now
       double rateValue = ((marketPrice + fixedPerKwh) * (1.0 + defaultMargin));
-      log.info("rateValue = {} for pt {}", rateValue, pt);
       double periodicValue = defaultPeriodicPayment;
       if (pt.isProduction()) {
         rateValue = -2.0 * marketPrice;
@@ -406,6 +405,7 @@ implements PortfolioManager, Initializable, Activatable
       if (pt.isInterruptible()) {
         rateValue *= 0.7; // Magic number!! price break for interruptible
       }
+      //log.info("rateValue = {} for pt {}", rateValue, pt);
       log.info("Tariff {}: rate={}, periodic={}", pt, rateValue, periodicValue);
       TariffSpecification spec =
           new TariffSpecification(brokerContext.getBroker(), pt)
