@@ -33,6 +33,7 @@ import org.powertac.common.Timeslot;
 import org.powertac.common.WeatherForecast;
 import org.powertac.common.WeatherReport;
 import org.powertac.common.config.ConfigurableValue;
+import org.powertac.common.msg.BalanceReport;
 import org.powertac.common.msg.MarketBootstrapData;
 import org.powertac.common.repo.TimeslotRepo;
 import org.powertac.samplebroker.core.BrokerPropertiesService;
@@ -235,11 +236,12 @@ implements MarketManager, Initializable, Activatable
   }
   
   /**
-   * Receives the market orderbooks
+   * Receives market orderbooks. These list un-cleared bids and asks,
+   * from which a broker can construct approximate supply and demand curves
+   * for the following timeslot.
    */
   public synchronized void handleMessage (Orderbook orderbook)
   {
-    // implement something here.
   }
   
   /**
@@ -253,6 +255,14 @@ implements MarketManager, Initializable, Activatable
    * Receives a new WeatherReport.
    */
   public synchronized void handleMessage (WeatherReport report)
+  {
+  }
+
+  /**
+   * Receives a BalanceReport containing information about imbalance in the
+   * current timeslot.
+   */
+  public synchronized void handleMessage (BalanceReport report)
   {
   }
 
