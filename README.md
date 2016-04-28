@@ -42,3 +42,11 @@ You can then run your broker agent as
 
 `java -jar name.jar [args]`
 
+Generate javadocs
+-----------------
+
+You can use maven to generate javadocs for this package as
+
+`mvn javadoc:javadoc`
+
+after which you can find the generated documentation in the directory `target/site/apidocs/`.
