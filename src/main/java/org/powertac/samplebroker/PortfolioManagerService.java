@@ -117,8 +117,7 @@ implements PortfolioManager, Initializable, Activatable
   private double defaultPeriodicPayment = -1.0;
 
   /**
-   * Default constructor registers for messages, must be called after 
-   * message router is available.
+   * Default constructor.
    */
   public PortfolioManagerService ()
   {
@@ -126,8 +125,7 @@ implements PortfolioManager, Initializable, Activatable
   }
 
   /**
-   * Per-game initialization. Configures parameters and registers
-   * message handlers.
+   * Per-game initialization. Registration of message handlers is automated.
    */
   @Override // from Initializable
   public void initialize (BrokerContext context)
@@ -267,7 +265,7 @@ implements PortfolioManager, Initializable, Activatable
       tariffRepo.addSpecification(spec);
     }
   }
-  
+
   /**
    * Handles a TariffStatus message. This should do something when the status
    * is not SUCCESS.
@@ -276,7 +274,7 @@ implements PortfolioManager, Initializable, Activatable
   {
     log.info("TariffStatus: " + ts.getStatus());
   }
-  
+
   /**
    * Handles a TariffTransaction. We only care about certain types: PRODUCE,
    * CONSUME, SIGNUP, and WITHDRAW.
