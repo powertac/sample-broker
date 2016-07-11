@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -380,7 +381,8 @@ implements PortfolioManager, Initializable, Activatable
       improveTariffs();
     }
   }
-  
+
+  TariffSpecification originalConsumption = null;
   // Creates initial tariffs for the main power types. These are simple
   // fixed-rate two-part tariffs that give the broker a fixed margin.
   private void createInitialTariffs ()
@@ -423,6 +425,8 @@ implements PortfolioManager, Initializable, Activatable
       spec.addRate(rate);
       customerSubscriptions.put(spec, new LinkedHashMap<>());
       tariffRepo.addSpecification(spec);
+      if (pt == PowerType.CONSUMPTION)
+        originalConsumption = spec;
       brokerContext.sendMessage(spec);
     }
   }
@@ -456,45 +460,39 @@ implements PortfolioManager, Initializable, Activatable
         }
       }
     }
+    // add signup bonus in exchange for higher rates
+    if (377 == timeslotIndex) {
+      TariffSpecification signup =
+          new TariffSpecification(brokerContext.getBroker(),
+                                  PowerType.CONSUMPTION)
+            .withSignupPayment(20.0)
+            .withPeriodicPayment(defaultPeriodicPayment);
+      Rate rate = new Rate()
+        .withValue(originalConsumption.getRates().get(0).getValue() - 0.15);
+      signup.addRate(rate);
+      tariffRepo.addSpecification(signup);
+      brokerContext.sendMessage(signup);
+    }
     // magic-number hack to supersede a tariff
     if (380 == timeslotIndex) {
       // find the existing CONSUMPTION tariff
-      TariffSpecification oldc = null;
-      List<TariffSpecification> candidates =
-        tariffRepo.findTariffSpecificationsByBroker(brokerContext.getBroker());
-      if (null == candidates || 0 == candidates.size())
-        log.error("No tariffs found for broker");
-      else {
-        // oldc = candidates.get(0);
-        for (TariffSpecification candidate: candidates) {
-          if (candidate.getPowerType() == PowerType.CONSUMPTION) {
-            oldc = candidate;
-            break;
-          }
-        }
-        if (null == oldc) {
-          log.warn("No CONSUMPTION tariffs found");
-        }
-        else {
-          double rateValue = oldc.getRates().get(0).getValue();
-          // create a new CONSUMPTION tariff
-          TariffSpecification spec =
-            new TariffSpecification(brokerContext.getBroker(),
-                                    PowerType.CONSUMPTION)
-                .withPeriodicPayment(defaultPeriodicPayment * 1.1);
-          Rate rate = new Rate().withValue(rateValue);
-          spec.addRate(rate);
-          if (null != oldc)
-            spec.addSupersedes(oldc.getId());
-          //mungId(spec, 6);
-          tariffRepo.addSpecification(spec);
-          brokerContext.sendMessage(spec);
-          // revoke the old one
-          TariffRevoke revoke =
-            new TariffRevoke(brokerContext.getBroker(), oldc);
-          brokerContext.sendMessage(revoke);
-        }
-      }
+      double rateValue = originalConsumption.getRates().get(0).getValue();
+      // create a new CONSUMPTION tariff
+      TariffSpecification spec =
+          new TariffSpecification(brokerContext.getBroker(),
+                                  PowerType.CONSUMPTION)
+      .withPeriodicPayment(defaultPeriodicPayment * 1.1);
+      Rate rate = new Rate().withValue(rateValue);
+      spec.addRate(rate);
+      if (null != originalConsumption)
+        spec.addSupersedes(originalConsumption.getId());
+      //mungId(spec, 6);
+      tariffRepo.addSpecification(spec);
+      brokerContext.sendMessage(spec);
+      // revoke the old one
+      TariffRevoke revoke =
+          new TariffRevoke(brokerContext.getBroker(), originalConsumption);
+      brokerContext.sendMessage(revoke);
     }
   }
 
