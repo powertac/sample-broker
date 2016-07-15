@@ -496,6 +496,18 @@ implements PortfolioManager, Initializable, Activatable
         }
       }
     }
+    // Revoke all tariffs to test issue #882
+    if ((360 + 143) == timeslotIndex) {
+      List<TariffSpecification> candidates =
+          tariffRepo.findTariffSpecificationsByBroker(brokerContext.getBroker());
+      if (null == candidates || 0 == candidates.size())
+        log.error("No tariffs found for broker");
+      for (TariffSpecification spec: candidates) {
+        TariffRevoke revoke =
+            new TariffRevoke(brokerContext.getBroker(), spec);
+        brokerContext.sendMessage(revoke);
+      }
+    }
   }
 
   // ------------- test-support methods ----------------
