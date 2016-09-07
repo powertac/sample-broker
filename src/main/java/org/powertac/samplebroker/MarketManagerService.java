@@ -271,7 +271,8 @@ implements MarketManager, Initializable, Activatable
   /**
    * Compute needed quantities for each open timeslot, then submit orders
    * for those quantities.
-   * @see org.powertac.samplebroker.MarketManager#activate()
+   *
+   * @see org.powertac.samplebroker.interfaces.Activatable#activate(int)
    */
   @Override
   public synchronized void activate (int timeslotIndex)
