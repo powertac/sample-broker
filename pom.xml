@@ -21,11 +21,8 @@
 
 
   <properties>
-    <maven-exec.flags>-server -Xmx512m -classpath %classpath</maven-exec.flags>
-    <maven-exec.class>org.powertac.samplebroker.core.BrokerMain</maven-exec.class>
-    <maven-exec.args></maven-exec.args>
-
     <maven-shade.version>2.4.3</maven-shade.version>
+    <exec.args></exec.args>
   </properties>
 
 
@@ -61,6 +58,17 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <executable>java</executable>
+          <commandlineArgs>-server -Xmx512m -classpath %classpath org.powertac.samplebroker.core.BrokerMain ${exec.args}</commandlineArgs>
+        </configuration>
       </plugin>
 
       <plugin>
