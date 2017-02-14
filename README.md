@@ -29,6 +29,11 @@ where arguments can include:
 
 If there are no non-default arguments, and if the broker has already been compiled, then it is enough to simply run the broker as `mvn exec:exec`.
 
+Note: because of how the exec Maven plugin works, and because the main class is actually in a different module (`broker-core`), it is possible to execute
+without compiling. This will result in running stale class files (previously compiled classes possibly from outdated source code) or, if you've not compiled
+at all yet or recently cleaned the project, a broker that connects to the server but doesn't issue any transactions. So always make sure to tell Maven to do
+both `compile` as well as `exec:exec`!
+
 Prepare an executable jar
 ---------------------------
 
