@@ -15,7 +15,7 @@ Run from command line
 
 This is a maven project. You can run the broker from the command line using maven, as
 
-`mvn compile exec:exec [-Dexec.args="<arguments>"]`
+`mvn test exec:exec [-Dexec.args="<arguments>"]`
 
 where arguments can include:
 
