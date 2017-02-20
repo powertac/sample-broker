@@ -20,6 +20,15 @@
   </parent>
 
 
+<!-- Sonatype OSS repo for resolving snapshot dependencies -->
+
+  <repositories>
+    <repository>
+      <id>sonatype</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+    </repository>
+  </repositories>
+
   <properties>
     <maven-shade.version>2.4.3</maven-shade.version>
     <exec.args></exec.args>
@@ -45,7 +54,7 @@
 
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
+      <artifactId>mockito-core</artifactId>
     </dependency>
 
   </dependencies>
