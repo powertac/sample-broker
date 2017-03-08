@@ -68,7 +68,7 @@ import org.springframework.stereotype.Service;
 public class PortfolioManagerService 
 implements PortfolioManager, Initializable, Activatable
 {
-  static private Logger log = LogManager.getLogger(PortfolioManagerService.class);
+  static Logger log = LogManager.getLogger(PortfolioManagerService.class);
   
   private BrokerContext brokerContext; // master
 
@@ -100,6 +100,9 @@ implements PortfolioManager, Initializable, Activatable
   private Map<TariffSpecification,
       Map<CustomerInfo, CustomerRecord>> customerSubscriptions;
   private Map<PowerType, List<TariffSpecification>> competingTariffs;
+
+  // These customer records need to be notified on activation
+  private List<CustomerRecord> notifyOnActivation = new ArrayList<>();
 
   // Configurable parameters for tariff composition
   // Override defaults in src/main/resources/config/broker.config
@@ -135,6 +138,7 @@ implements PortfolioManager, Initializable, Activatable
     customerProfiles = new LinkedHashMap<>();
     customerSubscriptions = new LinkedHashMap<>();
     competingTariffs = new HashMap<>();
+    notifyOnActivation.clear();
   }
   
   // -------------- data access ------------------
@@ -180,6 +184,8 @@ implements PortfolioManager, Initializable, Activatable
           new CustomerRecord(getCustomerRecordByPowerType(spec.getPowerType(),
                                                           customer));
       customerMap.put(customer, record);
+      // set up deferred activation in case this customer might do regulation
+      record.setDeferredActivation();
     }
     return record;
   }
@@ -306,19 +312,27 @@ implements PortfolioManager, Initializable, Activatable
       // customers presumably found a better deal
       record.withdraw(ttx.getCustomerCount());
     }
+    else if (ttx.isRegulation()) {
+      // Regulation transaction -- we record it as production/consumption
+      // to avoid distorting the customer record. 
+      log.debug("Regulation transaction from {}, {} kWh for {}",
+                ttx.getCustomerInfo().getName(),
+                ttx.getKWh(), ttx.getCharge());
+      record.produceConsume(ttx.getKWh(), ttx.getPostedTime());
+    }
     else if (TariffTransaction.Type.PRODUCE == txType) {
       // if ttx count and subscribe population don't match, it will be hard
       // to estimate per-individual production
       if (ttx.getCustomerCount() != record.subscribedPopulation) {
-        log.warn("production by subset " + ttx.getCustomerCount() +
-                 " of subscribed population " + record.subscribedPopulation);
+        log.warn("production by subset {}  of subscribed population {}",
+                 ttx.getCustomerCount(), record.subscribedPopulation);
       }
       record.produceConsume(ttx.getKWh(), ttx.getPostedTime());
     }
     else if (TariffTransaction.Type.CONSUME == txType) {
       if (ttx.getCustomerCount() != record.subscribedPopulation) {
-        log.warn("consumption by subset " + ttx.getCustomerCount() +
-                 " of subscribed population " + record.subscribedPopulation);
+        log.warn("consumption by subset {} of subscribed population {}",
+                 ttx.getCustomerCount(), record.subscribedPopulation);
       }
       record.produceConsume(ttx.getKWh(), ttx.getPostedTime());      
     }
@@ -379,6 +393,8 @@ implements PortfolioManager, Initializable, Activatable
       // we have some, are they good enough?
       improveTariffs();
     }
+    for (CustomerRecord record: notifyOnActivation)
+      record.activate();
   }
   
   // Creates initial tariffs for the main power types. These are simple
@@ -547,7 +563,10 @@ implements PortfolioManager, Initializable, Activatable
     int subscribedPopulation = 0;
     double[] usage;
     double alpha = 0.3;
-    
+    boolean deferredActivation = false;
+    double deferredUsage = 0.0;
+    int savedIndex = 0;
+
     /**
      * Creates an empty record
      */
@@ -557,33 +576,40 @@ implements PortfolioManager, Initializable, Activatable
       this.customer = customer;
       this.usage = new double[brokerContext.getUsageRecordLength()];
     }
-    
+
     CustomerRecord (CustomerRecord oldRecord)
     {
       super();
       this.customer = oldRecord.customer;
       this.usage = Arrays.copyOf(oldRecord.usage, brokerContext.getUsageRecordLength());
     }
-    
+
     // Returns the CustomerInfo for this record
     CustomerInfo getCustomerInfo ()
     {
       return customer;
     }
-    
+
     // Adds new individuals to the count
     void signup (int population)
     {
       subscribedPopulation = Math.min(customer.getPopulation(),
                                       subscribedPopulation + population);
     }
-    
+
     // Removes individuals from the count
     void withdraw (int population)
     {
       subscribedPopulation -= population;
     }
-    
+
+    // Sets up deferred activation
+    void setDeferredActivation ()
+    {
+      deferredActivation = true;
+      notifyOnActivation.add(this);
+    }
+
     // Customer produces or consumes power. We assume the kwh value is negative
     // for production, positive for consumption
     void produceConsume (double kwh, Instant when)
@@ -591,9 +617,27 @@ implements PortfolioManager, Initializable, Activatable
       int index = getIndex(when);
       produceConsume(kwh, index);
     }
-    
-    // store profile data at the given index
+
+    // stores profile data at the given index
     void produceConsume (double kwh, int rawIndex)
+    {
+      if (deferredActivation) {
+        deferredUsage += kwh;
+        savedIndex = rawIndex;
+      }
+      else
+        localProduceConsume(kwh, rawIndex);
+    }
+
+    // processes deferred recording to accomodate regulation
+    void activate ()
+    {
+      //PortfolioManagerService.log.info("activate {}", customer.getName());
+      localProduceConsume(deferredUsage, savedIndex);
+      deferredUsage = 0.0;
+    }
+
+    private void localProduceConsume (double kwh, int rawIndex)
     {
       int index = getIndex(rawIndex);
       double kwhPerCustomer = 0.0;
@@ -609,19 +653,18 @@ implements PortfolioManager, Initializable, Activatable
         // exponential smoothing
         usage[index] = alpha * kwhPerCustomer + (1.0 - alpha) * oldUsage;
       }
-      log.debug("consume " + kwh + " at " + index +
-                ", customer " + customer.getName());
+      //PortfolioManagerService.log.debug("consume {} at {}, customer {}", kwh, index, customer.getName());
     }
-    
+
     double getUsage (int index)
     {
       if (index < 0) {
-        log.warn("usage requested for negative index " + index);
+        PortfolioManagerService.log.warn("usage requested for negative index " + index);
         index = 0;
       }
       return (usage[getIndex(index)] * (double)subscribedPopulation);
     }
-    
+
     // we assume here that timeslot index always matches the number of
     // timeslots that have passed since the beginning of the simulation.
     int getIndex (Instant when)
@@ -630,7 +673,7 @@ implements PortfolioManager, Initializable, Activatable
                          (Competition.currentCompetition().getTimeslotDuration()));
       return result;
     }
-    
+
     private int getIndex (int rawIndex)
     {
       return rawIndex % usage.length;
