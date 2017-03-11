@@ -173,7 +173,8 @@ implements MarketManager, Initializable, Activatable
   }
 
   /**
-   * Handles a DistributionTransaction - charges for transporting power
+   * Handles a CapacityTransaction - a charge for contribution to overall
+   * peak demand over the recent past.
    */
   public synchronized void handleMessage (CapacityTransaction dt)
   {
