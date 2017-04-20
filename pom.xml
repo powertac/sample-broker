@@ -32,6 +32,7 @@
   <properties>
     <maven-shade.version>2.4.3</maven-shade.version>
     <exec.args></exec.args>
+    <syst.args></syst.args>
   </properties>
 
 
@@ -76,7 +77,7 @@
         </executions>
         <configuration>
           <executable>java</executable>
-          <commandlineArgs>-server -Xmx512m -classpath %classpath org.powertac.samplebroker.core.BrokerMain ${exec.args}</commandlineArgs>
+          <commandlineArgs>-server -Xmx512m -classpath %classpath ${syst.args} org.powertac.samplebroker.core.BrokerMain ${exec.args}</commandlineArgs>
         </configuration>
       </plugin>
 
@@ -92,7 +93,7 @@
               <resource>META-INF/spring.schemas</resource>
             </transformer>
             <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-              <mainClass>${maven-exec.class}</mainClass>
+              <mainClass>org.powertac.samplebroker.core.BrokerMain</mainClass>
             </transformer>
           </transformers>
         </configuration>
