@@ -15,10 +15,16 @@
   <parent>
     <groupId>org.powertac</groupId>
     <artifactId>powertac-parent</artifactId>
-    <version>1.4.3-SNAPSHOT</version>
+    <version>1.4.3</version>
     <relativePath />
   </parent>
 
+  <properties>
+    <powertac.version>1.4.3</powertac.version>
+    <maven-shade.version>2.4.3</maven-shade.version>
+    <exec.args></exec.args>
+    <syst.args></syst.args>
+  </properties>
 
 <!-- Sonatype OSS repo for resolving snapshot dependencies -->
 
@@ -29,15 +35,7 @@
     </repository>
   </repositories>
 
-  <properties>
-    <maven-shade.version>2.4.3</maven-shade.version>
-    <exec.args></exec.args>
-    <syst.args></syst.args>
-  </properties>
-
-
   <dependencies>
-
     <!-- Power TAC -->
     <dependency>
       <groupId>org.powertac</groupId>
