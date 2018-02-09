@@ -30,6 +30,7 @@ import org.powertac.common.Competition;
 import org.powertac.common.CustomerInfo;
 import org.powertac.common.Rate;
 import org.powertac.common.RegulationRate;
+import org.powertac.common.RegulationRate.ResponseTime;
 import org.powertac.common.TariffSpecification;
 import org.powertac.common.TariffTransaction;
 import org.powertac.common.TimeService;
@@ -432,8 +433,8 @@ implements PortfolioManager, Initializable, Activatable
       if (pt.isStorage()) {
         // add a RegulationRate
         RegulationRate rr = new RegulationRate();
-        rr.withUpRegulationPayment(rateValue * 1.2)
-            .withDownRegulationPayment(-rateValue * 0.4); // magic numbers
+        rr.withUpRegulationPayment(-rateValue * 1.2)
+            .withDownRegulationPayment(rateValue * 0.4); // magic numbers
         spec.addRate(rr);
       }
       spec.addRate(rate);
@@ -457,18 +458,6 @@ implements PortfolioManager, Initializable, Activatable
                                                     0.5,
                                                     spec.getRates().get(0).getMinValue() * 0.9);
           brokerContext.sendMessage(order);
-        }
-        else if (spec.hasRegulationRate()) {
-          // supports both up-regulation and down-regulation
-          RegulationRate rr = spec.getRegulationRates().get(0);
-          double up = -rr.getUpRegulationPayment();
-          double down = -rr.getDownRegulationPayment();
-          BalancingOrder bup = new BalancingOrder(brokerContext.getBroker(),
-                                                 spec, 1.0, up);
-          BalancingOrder bdown = new BalancingOrder(brokerContext.getBroker(),
-                                                    spec, -1.0, down);
-          brokerContext.sendMessage(bup);
-          brokerContext.sendMessage(bdown);
         }
       }
     }
