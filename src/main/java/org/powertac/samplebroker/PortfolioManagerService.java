@@ -31,6 +31,7 @@ import org.powertac.common.CustomerInfo;
 import org.powertac.common.Rate;
 import org.powertac.common.RegulationRate;
 import org.powertac.common.RegulationRate.ResponseTime;
+import org.powertac.common.Tariff;
 import org.powertac.common.TariffSpecification;
 import org.powertac.common.TariffTransaction;
 import org.powertac.common.TimeService;
@@ -39,6 +40,7 @@ import org.powertac.common.enumerations.PowerType;
 import org.powertac.common.msg.BalancingControlEvent;
 import org.powertac.common.msg.BalancingOrder;
 import org.powertac.common.msg.CustomerBootstrapData;
+import org.powertac.common.msg.EconomicControlEvent;
 import org.powertac.common.msg.TariffRevoke;
 import org.powertac.common.msg.TariffStatus;
 import org.powertac.common.repo.CustomerRepo;
@@ -499,6 +501,16 @@ implements PortfolioManager, Initializable, Activatable
             new TariffRevoke(brokerContext.getBroker(), oldc);
           brokerContext.sendMessage(revoke);
         }
+      }
+    }
+    // Exercise economic controls every 4 timeslots
+    if ((timeslotIndex % 4) == 3) {
+      List<TariffSpecification> candidates =
+              tariffRepo.findTariffSpecificationsByPowerType(PowerType.INTERRUPTIBLE_CONSUMPTION);
+      for (TariffSpecification spec: candidates) {
+        EconomicControlEvent ece =
+                new EconomicControlEvent(spec, 0.2, timeslotIndex + 1);
+        brokerContext.sendMessage(ece);
       }
     }
   }
