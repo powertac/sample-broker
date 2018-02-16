@@ -8,7 +8,7 @@ Without changing anything, the current version assumes the server is running on 
 Import into IDE
 ---------------
 
-Most developers will presumably want to work with the code using an IDE such as [STS](http://www.springsource.org/sts). The sample-broker package is a maven project, so it works to just do File->Import->Existing Maven Projects and select the sample-broker directory (the directory containing the pom.xml file). You may wish to change the "artifactId" attribute in the pom.xml to match the name of your broker. You can set up a simple "run configuration" to allow you to run it from the IDE. It is an AspectJ/Java app, the main class is `org.powertac.samplebroker.core.BrokerMain`, and there are no arguments required unless you wish to specify an alternate config file or pass other options (see below).
+Most developers will presumably want to work with the code using an IDE such as [STS](http://www.springsource.org/sts). The sample-broker package is a maven project, so it works to just do File->Import->Existing Maven Projects and select the sample-broker directory (the directory containing the pom.xml file). You may wish to change the "name" attribute in the pom.xml to match the name of your broker. You can set up a simple "run configuration" to allow you to run it from the IDE. It is an AspectJ/Java app, the main class is `org.powertac.samplebroker.core.BrokerMain`, and there are no arguments required unless you wish to specify an alternate config file or pass other options (see below).
 
 Run from command line
 ---------------------
@@ -41,7 +41,7 @@ Power TAC and other competitive simulations are research tools. A major advantag
 
 `mvn clean package`
 
-which will produce a file `target/name.jar`, where `name` is the "name" element near the top of the pom.xml. All classpath resources will be included (files in `src/main/resources`) in addition to the compiled classes and all dependencies. To share your broker, you need to bundle the executable jar with any configuration files needed by your implementation that are not on the classpath (such as broker.properties), and of course a README file that tells others how to use it.
+which will produce a file `target/${artifactId}-${version}.jar`, corresponding to the `artifactId` and `version` tags near the top of the pom.xml. All classpath resources will be included (files in `src/main/resources`) in addition to the compiled classes and all dependencies. To share your broker, you need to bundle the executable jar with any configuration files needed by your implementation that are not on the classpath (such as broker.properties), and of course a README file that tells others how to use it.
 
 You can then run your broker agent as
 
