@@ -8,7 +8,7 @@ Without changing anything, the current version assumes the server is running on 
 Import into IDE
 ---------------
 
-Most developers will presumably want to work with the code using an IDE such as [STS](http://www.springsource.org/sts). The sample-broker package is a maven project, so it works to just do File->Import->Existing Maven Projects and select the sample-broker directory (the directory containing the pom.xml file). You may wish to change the "name" attribute in the pom.xml to match the name of your broker. You can set up a simple "run configuration" to allow you to run it from the IDE. It is an AspectJ/Java app, the main class is `org.powertac.samplebroker.core.BrokerMain`, and there are no arguments required unless you wish to specify an alternate config file or pass other options (see below).
+Most developers will presumably want to work with the code using an IDE such as [STS](http://www.springsource.org/sts). The sample-broker package is a maven project, so it works to just do File->Import->Existing Maven Projects and select the sample-broker directory (the directory containing the pom.xml file). You may wish to change the "artifactId" attribute in the pom.xml to match the name of your broker. You can set up a simple "run configuration" to allow you to run it from the IDE. It is an AspectJ/Java app, the main class is `org.powertac.samplebroker.core.BrokerMain`, and there are no arguments required unless you wish to specify an alternate config file or pass other options (see below).
 
 Run from command line
 ---------------------
