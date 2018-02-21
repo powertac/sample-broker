@@ -44,6 +44,10 @@ service SubmitAdapter {
     rpc submitOrder                     (PBOrder) returns (PBCallCompleted){}
 }
 
+service IncomingMessagesService{
+    rpc handleAnyMessage                (PBRequestStream) returns  (stream PBAnyMessageContainer){}
+}
+
 // ENUMS
 // ====================================================
 enum PBCustomerClass {
@@ -91,6 +95,49 @@ enum PBStatus {
 // MESSAGES
 // ====================================================
 
+// Mother of all messages --> can be used as a container for any other
+// message and therefore, just one service needs to be exposed. Not sure
+// yet which one is better, I'll try both. for now.
+message PBAnyMessageContainer{
+    oneof messages {
+        PBActivate                   pBActivate                      = 1  ;
+        PBBalanceReport              pBBalanceReport                 = 2  ;
+        PBBalancingControlEvent      pBBalancingControlEvent         = 3  ;
+        PBBalancingTransaction       pBBalancingTransaction          = 4  ;
+        PBBankTransaction            pBBankTransaction               = 5  ;
+        PBBroker                     pBBroker                        = 6  ;
+        PBCallCompleted              pBCallCompleted                 = 7  ;
+        PBCapacityTransaction        pBCapacityTransaction           = 8  ;
+        PBCashPosition               pBCashPosition                  = 9  ;
+        PBClearedTrade               pBClearedTrade                  = 10 ;
+        PBCompetition                pBCompetition                   = 11 ;
+        PBCustomerBootstrapData      pBCustomerBootstrapData         = 12 ;
+        PBCustomerInfo               pBCustomerInfo                  = 13 ;
+        PBCustomer                   pBCustomer                      = 14 ;
+        PBDistributionReport         pBDistributionReport            = 15 ;
+        PBDistributionTransaction    pBDistributionTransaction       = 16 ;
+        PBMarketBootstrapData        pBMarketBootstrapData           = 17 ;
+        PBMarketPosition             pBMarketPosition                = 18 ;
+        PBMarketTransaction          pBMarketTransaction             = 19 ;
+        PBOrderbookOrder             pBOrderbookOrder                = 20 ;
+        PBOrderbook                  pBOrderbook                     = 21 ;
+        PBOrder                      pBOrder                         = 22 ;
+        PBPowerType                  pBPowerType                     = 23 ;
+        PBProperties                 pBProperties                    = 24 ;
+        PBRateCore                   pBRateCore                      = 25 ;
+        PBRequestStream              pBRequestStream                 = 26 ;
+        PBRetailKPIHolder            pBRetailKPIHolder               = 27 ;
+        PBTariffRevoke               pBTariffRevoke                  = 28 ;
+        PBTariffSpecification        pBTariffSpecification           = 29 ;
+        PBTariffStatus               pBTariffStatus                  = 30 ;
+        PBTariffTransaction          pBTariffTransaction             = 31 ;
+        PBTimeslot                   pBTimeslot                      = 32 ;
+        PBWeatherForecast            pBWeatherForecast               = 33 ;
+        PBWeatherForecastPrediction  pBWeatherForecastPrediction     = 34 ;
+        PBWeatherReport              pBWeatherReport                 = 35 ;
+    }
+}
+
 //system message, not related to powertac
 message PBCallCompleted {
     bool completed                                = 1 ;
@@ -116,12 +163,12 @@ message PBOrder {
 }
 
 message PBCompetition {
-    int64 id                                      = 1 ;              
-    string name                                   = 2 ;              
-    string description                            = 3 ;              
-    string pomId                                  = 4 ;              
+    int64 id                                      = 1 ;
+    string name                                   = 2 ;
+    string description                            = 3 ;
+    string pomId                                  = 4 ;
     int32 timeslotLength                          = 5 ;
-    int32 bootstrapTimeslotCount                  = 6 ;              
+    int32 bootstrapTimeslotCount                  = 6 ;
     int32 bootstrapDiscardedTimeslots             = 7 ;              
     int32 minimumTimeslotCount                    = 8 ;              
     int32 expectedTimeslotCount                   = 9 ;              

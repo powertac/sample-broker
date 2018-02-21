@@ -24,6 +24,7 @@ import org.powertac.grpc.streams.ContextManagerServiceImpl;
 import org.powertac.common.config.ConfigurableValue;
 import org.powertac.samplebroker.core.BrokerRunner;
 import org.powertac.util.ProxyAuthenticator;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -40,6 +41,9 @@ public class GRPCServer {
     @ConfigurableValue(valueType = "Integer", description = "Port to listen to with GRPC server")
     private int port = 3004;
 
+    @Autowired
+    GrpcInterceptor interceptor;
+
     public boolean tacStarted;
     private String[] cliArgs;
 
@@ -50,7 +54,7 @@ public class GRPCServer {
 
         Server server = ServerBuilder.forPort(port)
                 .addService(new ContextManagerServiceImpl())
-                .intercept(new GrpcInterceptor())
+                .intercept(interceptor)
                 .build();
         server.start();
         System.out.println("Started GRPC Listener");

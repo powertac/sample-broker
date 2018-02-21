@@ -24,7 +24,10 @@ import org.powertac.common.CashPosition;
 import org.powertac.common.Competition;
 import org.powertac.common.msg.DistributionReport;
 import org.powertac.grpc.GRPCTypeConverter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import javax.xml.bind.annotation.XmlAccessorOrder;
 
 /**
  * GRPC message handler for ContextManagerService. This only works with one client so if a second client connects to the
@@ -40,6 +43,9 @@ public class ContextManagerServiceImpl extends ContextManagerServiceGrpc.Context
     private StreamObserver<PBDistributionReport> pbDistributionReportStreamObserver;
     private StreamObserver<PBCompetition> pbCompetitionStreamObserver;
     private StreamObserver<PBProperties> pbPropertiesStreamObserver;
+
+    @Autowired
+    GRPCTypeConverter converter;
 
     @Override
     public void handlePBProperties(PBProperties request, StreamObserver<PBProperties> responseObserver) {
@@ -90,7 +96,7 @@ public class ContextManagerServiceImpl extends ContextManagerServiceGrpc.Context
      * BankTransaction represents an interest payment. Value is positive for credit, negative for debit.
      */
     public void handleMessage(BankTransaction btx) {
-        PBBankTransaction pbbtx = GRPCTypeConverter.bankTransactionC(btx);
+        PBBankTransaction pbbtx = converter.bankTransactionC(btx);
         pbBankTransactionStreamObserver.onNext(pbbtx);
     }
 
@@ -98,7 +104,7 @@ public class ContextManagerServiceImpl extends ContextManagerServiceGrpc.Context
      * CashPosition updates our current bank balance.
      */
     public void handleMessage(CashPosition cp) {
-        PBCashPosition pbcp = GRPCTypeConverter.cashPositionC(cp);
+        PBCashPosition pbcp = converter.cashPositionC(cp);
         pbCashPositionStreamObserver.onNext(pbcp);
     }
 
@@ -106,7 +112,7 @@ public class ContextManagerServiceImpl extends ContextManagerServiceGrpc.Context
      * DistributionReport gives total consumption and production for the timeslot, summed across all brokers.
      */
     public void handleMessage(DistributionReport dr) {
-        PBDistributionReport pbdr = GRPCTypeConverter.distributionReportC(dr);
+        PBDistributionReport pbdr = converter.distributionReportC(dr);
         pbDistributionReportStreamObserver.onNext(pbdr);
     }
 
@@ -115,7 +121,7 @@ public class ContextManagerServiceImpl extends ContextManagerServiceGrpc.Context
      * we can keep track of their subscriptions and usage profiles.
      */
     public void handleMessage(Competition comp) {
-        PBCompetition pbc = GRPCTypeConverter.competitionC(comp);
+        PBCompetition pbc = converter.competitionC(comp);
         pbCompetitionStreamObserver.onNext(pbc);
     }
 
@@ -123,7 +129,7 @@ public class ContextManagerServiceImpl extends ContextManagerServiceGrpc.Context
      * Receives the server configuration properties.
      */
     public void handleMessage(java.util.Properties serverProps) {
-        PBProperties pbp = GRPCTypeConverter.propertiesC(serverProps);
+        PBProperties pbp = converter.propertiesC(serverProps);
         pbPropertiesStreamObserver.onNext(pbp);
     }
 
