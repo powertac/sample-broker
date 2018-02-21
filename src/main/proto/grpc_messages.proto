@@ -13,7 +13,7 @@ service ContextManagerService {
     rpc handlePBDistributionReport      (PBRequestStream) returns  (stream PBDistributionReport) {}
     rpc handlePBCompetition             (PBRequestStream) returns  (stream PBCompetition) {}
     //TODO handle java properties file of server, needed?
-    //rpc handlePBProperties         (PBProperties)         returns (bool) {}
+    rpc handlePBProperties         (PBProperties)         returns  (stream PBProperties) {}
 }
 service MarketManagerService {
     rpc handlePBActivate                (PBRequestStream) returns  (stream PBActivate ){}
@@ -72,21 +72,21 @@ enum PBStatus {
   unsupported                                     = 8 ;                                         
 }
 
-enum PBPowerType {
-  CONSUMPTION                                     = 0 ;
-  PRODUCTION                                      = 1 ;
-  STORAGE                                         = 2 ;
-  INTERRUPTIBLE_CONSUMPTION                       = 3 ;
-  THERMAL_STORAGE_CONSUMPTION                     = 4 ;
-  SOLAR_PRODUCTION                                = 5 ; 
-  WIND_PRODUCTION                                 = 6 ;
-  RUN_OF_RIVER_PRODUCTION                         = 7 ;
-  PUMPED_STORAGE_PRODUCTION                       = 8 ;
-  CHP_PRODUCTION                                  = 9 ;
-  FOSSIL_PRODUCTION                               = 10 ;
-  BATTERY_STORAGE                                 = 11 ;
-  ELECTRIC_VEHICLE                                = 12 ;
-}
+//enum PBPowerType {
+//  CONSUMPTION                                     = 0 ;
+//  PRODUCTION                                      = 1 ;
+//  STORAGE                                         = 2 ;
+//  INTERRUPTIBLE_CONSUMPTION                       = 3 ;
+//  THERMAL_STORAGE_CONSUMPTION                     = 4 ;
+//  SOLAR_PRODUCTION                                = 5 ;
+//  WIND_PRODUCTION                                 = 6 ;
+//  RUN_OF_RIVER_PRODUCTION                         = 7 ;
+//  PUMPED_STORAGE_PRODUCTION                       = 8 ;
+//  CHP_PRODUCTION                                  = 9 ;
+//  FOSSIL_PRODUCTION                               = 10 ;
+//  BATTERY_STORAGE                                 = 11 ;
+//  ELECTRIC_VEHICLE                                = 12 ;
+//}
 
 // MESSAGES
 // ====================================================
@@ -292,7 +292,12 @@ message PBBalanceReport {
    int64 id                                         = 1 ;           
    double netImbalance                              = 2 ;           
    int32 timeslotIndex                              = 3 ;
-}                                                              
+}
+
+message PBPowerType {
+    string label                                    = 1 ;
+}
+
 message PBCustomerBootstrapData {                                
    int64 id                                         = 1 ;           
    string customerName                              = 2 ;           
@@ -354,3 +359,6 @@ message PBTariffRevoke {
    PBBroker broker                                  = 3 ;
 }
 
+message PBProperties {
+    map<string,string> values                       = 1 ;
+}

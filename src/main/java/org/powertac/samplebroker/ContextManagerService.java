@@ -15,6 +15,7 @@
  */
 package org.powertac.samplebroker;
 
+import org.powertac.grpc.streams.ContextManagerServiceImpl;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 import org.powertac.common.BankTransaction;
@@ -23,6 +24,7 @@ import org.powertac.common.Competition;
 import org.powertac.common.msg.DistributionReport;
 import org.powertac.samplebroker.interfaces.BrokerContext;
 import org.powertac.samplebroker.interfaces.Initializable;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -35,6 +37,8 @@ implements Initializable
 {
   static private Logger log = LogManager.getLogger(ContextManagerService.class);
 
+  @Autowired
+  ContextManagerServiceImpl cmsi;
   BrokerContext master;
 
   // current cash balance
@@ -67,7 +71,7 @@ implements Initializable
    */
   public void handleMessage (BankTransaction btx)
   {
-    // TODO - handle this
+      this.cmsi.handleMessage(btx);
   }
 
   /**
@@ -75,8 +79,7 @@ implements Initializable
    */
   public void handleMessage (CashPosition cp)
   {
-    cash = cp.getBalance();
-    log.info("Cash position: " + cash);
+    this.cmsi.handleMessage(cp);
   }
   
   /**
@@ -85,7 +88,7 @@ implements Initializable
    */
   public void handleMessage (DistributionReport dr)
   {
-    // TODO - use this data
+    this.cmsi.handleMessage(dr);
   }
   
   /**
@@ -95,7 +98,7 @@ implements Initializable
    */
   public void handleMessage (Competition comp)
   {
-    // TODO - process competition properties
+    this.cmsi.handleMessage(comp);
   }
 
   /**
@@ -103,6 +106,6 @@ implements Initializable
    */
   public void handleMessage (java.util.Properties serverProps)
   {
-    // TODO - adapt to the server setup.
+    this.cmsi.handleMessage(serverProps);
   }
 }
