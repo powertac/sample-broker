@@ -1,0 +1,356 @@
+syntax = "proto3";
+option java_package = "de.pascalwhoop.powertac.grpc";
+option java_multiple_files = true;
+
+// SERVICES
+// ====================================================
+service ContextManagerService {
+    //in java, these are overloaded with different class types.
+    //GRPC doesn't allow same names so we name them as so
+    //handle<messagetype>()
+    rpc handlePBBankTransaction         (PBRequestStream) returns  (stream PBBankTransaction) {}
+    rpc handlePBCashPosition            (PBRequestStream) returns  (stream PBCashPosition) {}
+    rpc handlePBDistributionReport      (PBRequestStream) returns  (stream PBDistributionReport) {}
+    rpc handlePBCompetition             (PBRequestStream) returns  (stream PBCompetition) {}
+    //TODO handle java properties file of server, needed?
+    //rpc handlePBProperties         (PBProperties)         returns (bool) {}
+}
+service MarketManagerService {
+    rpc handlePBActivate                (PBRequestStream) returns  (stream PBActivate ){}
+    rpc handlePBCompetition             (PBRequestStream) returns  (stream PBCompetition ){}
+    rpc handlePBBalancingTransaction    (PBRequestStream) returns  (stream PBBalancingTransaction){}
+    rpc handlePBClearedTrade            (PBRequestStream) returns  (stream PBClearedTrade ){}
+    rpc handlePBDistributionTransaction (PBRequestStream) returns  (stream PBDistributionTransaction ){}
+    rpc handlePBCapacityTransaction     (PBRequestStream) returns  (stream PBCapacityTransaction ){}
+    rpc handlePBMarketBootstrapData     (PBRequestStream) returns  (stream PBMarketBootstrapData){}
+    rpc handlePBMarketPosition          (PBRequestStream) returns  (stream PBMarketPosition ){}
+    rpc handlePBMarketTransaction       (PBRequestStream) returns  (stream PBMarketTransaction ){}
+    rpc handlePBOrderbook               (PBRequestStream) returns  (stream PBOrderbook ){}
+    rpc handlePBWeatherForecast         (PBRequestStream) returns  (stream PBWeatherForecast ){}
+    rpc handlePBWeatherReport           (PBRequestStream) returns  (stream PBWeatherReport ){}
+    rpc handlePBBalanceReport           (PBRequestStream) returns  (stream PBBalanceReport){}
+}
+
+service PortfolioManagerService {
+    rpc handlePBCustomerBootstrapData   (PBRequestStream) returns  (stream PBCustomerBootstrapData ){}
+    rpc handlePBTariffSpecification     (PBRequestStream) returns  (stream PBTariffSpecification){}
+    rpc handlePBTariffStatus            (PBRequestStream) returns  (stream PBTariffStatus ){}
+    rpc handlePBTariffTransaction       (PBRequestStream) returns  (stream PBTariffTransaction){}
+    rpc handlePBTariffRevoke            (PBRequestStream) returns  (stream PBTariffRevoke ){}
+    rpc handlePBBalancingControlEvent   (PBRequestStream) returns  (stream PBBalancingControlEvent ){}
+}
+
+service SubmitAdapter {
+    rpc submitOrder                     (PBOrder) returns (PBCallCompleted){}
+}
+
+// ENUMS
+// ====================================================
+enum PBCustomerClass {
+  SMALL                                           = 0 ;             
+  LARGE                                           = 1 ;             
+} 
+enum PBTxType {
+  PUBLISH                                         = 0 ;             
+  PRODUCE                                         = 1 ;             
+  CONSUME                                         = 2 ;             
+  PERIODIC                                        = 3 ;             
+  SIGNUP                                          = 4 ;             
+  WITHDRAW                                        = 5 ;             
+  REVOKE                                          = 6 ;             
+  REFUND                                          = 7 ;             
+}
+enum PBStatus {
+  success                                         = 0 ;                                         
+  noSuchTariff                                    = 1 ;                                         
+  noSuchUpdate                                    = 2 ;                                         
+  illegalOperation                                = 3 ;                                         
+  invalidTariff                                   = 4 ;                                         
+  invalidUpdate                                   = 5 ;                                         
+  duplicateId                                     = 6 ;                                         
+  invalidPowerType                                = 7 ;                                         
+  unsupported                                     = 8 ;                                         
+}
+
+enum PBPowerType {
+  CONSUMPTION                                     = 0 ;
+  PRODUCTION                                      = 1 ;
+  STORAGE                                         = 2 ;
+  INTERRUPTIBLE_CONSUMPTION                       = 3 ;
+  THERMAL_STORAGE_CONSUMPTION                     = 4 ;
+  SOLAR_PRODUCTION                                = 5 ; 
+  WIND_PRODUCTION                                 = 6 ;
+  RUN_OF_RIVER_PRODUCTION                         = 7 ;
+  PUMPED_STORAGE_PRODUCTION                       = 8 ;
+  CHP_PRODUCTION                                  = 9 ;
+  FOSSIL_PRODUCTION                               = 10 ;
+  BATTERY_STORAGE                                 = 11 ;
+  ELECTRIC_VEHICLE                                = 12 ;
+}
+
+// MESSAGES
+// ====================================================
+
+//system message, not related to powertac
+message PBCallCompleted {
+    bool completed                                = 1 ;
+    string msg                                    = 2 ;
+}
+
+message PBRequestStream {
+    string msg                                    = 1 ;
+}
+
+//powertac messages adapted following now
+
+message PBActivate{
+    int32 timeslotIndex                           = 1 ;
+}
+
+message PBOrder {
+    int64 id                                      = 1 ;
+    PBBroker broker                               = 2 ;
+    PBTimeslot timeslot                                = 3 ;
+    double mWh                                    = 4 ;
+    double limitPrice                             = 5 ; //TODO is Double in powertac
+}
+
+message PBCompetition {
+    int64 id                                      = 1 ;              
+    string name                                   = 2 ;              
+    string description                            = 3 ;              
+    string pomId                                  = 4 ;              
+    int32 timeslotLength                          = 5 ;
+    int32 bootstrapTimeslotCount                  = 6 ;              
+    int32 bootstrapDiscardedTimeslots             = 7 ;              
+    int32 minimumTimeslotCount                    = 8 ;              
+    int32 expectedTimeslotCount                   = 9 ;              
+    int32 timeslotsOpen                           = 10 ;
+    int32 deactivateTimeslotsAhead                = 11 ;              
+    double minimumOrderQuantity                   = 12 ;              
+    int64 simulationBaseTime                      = 13 ;              
+    int32 timezoneOffset                          = 14 ;              
+    int32 latitude                                = 15 ;              
+    int64 simulationRate                          = 16 ;              
+    int64 simulationModulo                        = 17 ;              
+    repeated string brokers                       = 18 ;              
+    repeated PBCustomerInfo customer              = 19 ;
+}                                                              
+
+
+message PBBroker {                                               
+  int64 id                                        = 1 ;        
+  string username                                 = 2 ;             
+  string password                                 = 3 ;             
+  string key                                      = 4 ;             
+  string queueName                                = 5 ;             
+  bool enabled                                    = 6 ;             
+  bool local                                      = 7 ;             
+  int64 idPrefix                                  = 8 ;
+  bool wholesale                                  = 9 ;             
+  double cash                                     = 10 ;             
+  map<int32, PBMarketPosition> mktPositions       = 11 ;
+}
+message PBCustomer {                                             
+    int64 idCounter                               = 1  ;             
+    int64 id                                      = 2  ;             
+    int64 idCustomerInfo                          = 3  ;             
+    string name                                   = 4  ;             
+    int32 population                              = 5  ;             
+    string powerType                              = 6  ;             
+    double controllableKW                         = 7  ;             
+    double upRegulationKW                         = 8  ;             
+    double downRegulationKW                       = 9  ;             
+    double storageCapacity                        = 10  ;             
+    bool multiContracting                         = 11  ;             
+    bool canNegotiate                             = 12  ;             
+    string genericPowerType                       = 13  ;             
+    repeated double bootstrapNetUsage             = 14  ;             
+    PBRetailKPIHolder retail                      = 15  ;
+    string customerClass                          = 16  ;             
+}                                                              
+message PBRetailKPIHolder {                                      
+    int32 subscribedPopulation                      = 1 ;           
+    double kwh                                      = 2 ;           
+    double money                                    = 3 ;           
+    int32 activeTariffs                             = 4 ;           
+    int32 revokedTariffs                            = 5 ;           
+    int32 publishedTariffs                          = 6 ;           
+}                                                              
+message PBBankTransaction {                                      
+    int64 id                                        = 1 ;
+    PBBroker broker                                 = 2 ;
+    PBTimeslot  postedTimeslot                           = 3 ;
+    double amount                                   = 4 ;         
+}                                                              
+message PBCashPosition {                                         
+    int64 id                                        = 1 ;
+    PBBroker broker                                 = 2 ;
+    PBTimeslot  postedTimeslot                           = 3 ;
+    double balance                                  = 4 ;           
+}                                                              
+message PBDistributionReport {                                   
+    int64  id                                       = 1 ;           
+    PBTimeslot timeslot                                 = 2 ;
+    double totalConsumption                         = 3 ;           
+    double totalProduction                          = 4 ;           
+}                                                              
+message PBBalancingTransaction {                                 
+    int64 id                                        = 1 ;
+    PBBroker broker                                 = 2 ;
+    PBTimeslot  postedTimeslot                           = 3 ;
+    double kWh                                      = 4 ;           
+    double charge                                   = 5 ;           
+}                                                              
+message PBClearedTrade {                                         
+    int64 id                                        = 1 ;           
+    PBTimeslot timeslot                                  = 2 ;
+    double executionPrice                           = 3 ;           
+    double executionMWh                             = 4 ;           
+    int64 dateExecuted                              = 5 ;           
+}                                                   
+message PBDistributionTransaction {                   
+    int64 id                                        = 1 ;
+    PBBroker broker                                 = 2 ;
+    PBTimeslot postedTimeslot                            = 3 ;
+    double kWh                                      = 4 ;           
+    int32 nSmall                                    = 5 ;           
+    int32 nLarge                                    = 6 ;           
+    double charge                                   = 7 ;           
+}                                                              
+message PBCapacityTransaction {                                  
+    int64 id                                        = 1 ;
+    PBBroker broker                                 = 2 ;
+    PBTimeslot postedTimeslot                            = 3 ;
+    int32 peakTimeslot                              = 4 ;           
+    double threshold                                = 5 ;           
+    double kWh                                      = 6 ;           
+    double charge                                   = 7 ;           
+}                                                              
+message PBMarketBootstrapData {                                  
+    int64 id                                        = 1 ;           
+    repeated double mwh                             = 2 ;
+    repeated double marketPrice                     = 5 ;
+   }
+message PBMarketPosition {
+    int64 id                                        = 1 ;           
+    PBBroker broker                                 = 2 ;
+    PBTimeslot timeslot                                  = 3 ;
+    double overallBalance                           = 4 ;           
+}
+message PBTimeslot {
+    int32 serialNumber                              = 1 ;
+    int64 startInstant                              = 2 ;
+    // skipping startTime
+}
+message PBMarketTransaction {
+    int64 id                                        = 1 ;
+    PBBroker broker                                 = 2 ;
+    PBTimeslot postedTimeslot                            = 3 ;
+    double price                                    = 4 ;           
+    double mWh                                      = 5 ;           
+    PBTimeslot timeslot                                  = 6 ;
+}                                                              
+message PBOrderbook {                                            
+    int64 id                                        = 1 ;           
+    int64 dateExecuted                              = 2 ; //TODO instant
+    PBTimeslot timeslot                                  = 3 ;
+    double clearingPrice                            = 4 ;
+    repeated PBOrderbookOrder bids                  = 6 ;
+      repeated PBOrderbookOrder asks                = 8 ;
+}
+
+message PBOrderbookOrder {
+    int64 id                                        = 1 ;
+    double limitPrice                               = 2 ;
+    double mWh                                      = 3 ;
+}
+message PBWeatherForecast {                                      
+   int64 id                                         = 1 ;           
+   int32 currentTimeslot                            = 2 ;           
+   repeated PBWeatherForecastPrediction predictions = 3 ;
+}
+
+message PBWeatherForecastPrediction {
+  int64 id                                          = 1 ; 
+  int32 forecastTime                                = 2 ;          
+  double temperature                                = 3 ;          
+  double windSpeed                                  = 4 ;          
+  double windDirection                              = 5 ;          
+  double cloudCover                                 = 6 ;          
+}                                                              
+                                                               
+message PBWeatherReport {                                        
+   int64 id                                         = 1 ;           
+   int32 currentTimeslot                            = 2 ;           
+   double temperature                               = 3 ;           
+   double windSpeed                                 = 4 ;           
+   double windDirection                             = 5 ;           
+   double cloudCover                                = 6 ;           
+}                                                              
+message PBBalanceReport {                                        
+   int64 id                                         = 1 ;           
+   double netImbalance                              = 2 ;           
+   int32 timeslotIndex                              = 3 ;
+}                                                              
+message PBCustomerBootstrapData {                                
+   int64 id                                         = 1 ;           
+   string customerName                              = 2 ;           
+   PBPowerType powerType                            = 3 ;      
+   repeated double netUsage                         = 4 ;      
+}                                                              
+message PBCustomerInfo {                                       
+  int64 id                                          = 1 ;           
+  string name                                       = 2 ;           
+  int32 population                                  = 3 ;           
+  PBPowerType powerType                             = 4 ;           
+  PBCustomerClass customerClass                     = 5 ;           
+  double controllableKW                             = 6 ;           
+  double upRegulationKW                             = 7 ;           
+  double downRegulationKW                           = 8 ;           
+  double storageCapacity                            = 9 ;           
+}
+
+message PBRateCore {
+    int64 tariffId                                   = 1 ;
+    int64 id                                         = 2 ;
+}
+
+message PBTariffSpecification {                                  
+   int64 id                                          = 1 ;           
+   PBBroker broker                                   = 2 ;
+   int64 expiration                               = 3 ;
+   int64 minDuration                                = 4 ;
+   PBPowerType powerType                              = 5 ;
+   double signupPayment                             = 6 ;
+   double earlyWithdrawPayment                      = 7 ;
+   double periodicPayment                           = 8 ;
+   repeated PBRateCore rates                          = 9 ;
+   repeated int64 supersedes                        = 10 ;
+}                                                              
+message PBTariffStatus {
+    int64 tariffId                                  = 1 ;
+    int64 updateId                                  = 2 ;
+    string _message                                 = 3 ; //TODO special keyword... might have to intercept here
+    PBStatus status                                   = 4 ; // TODO enum not sure if works
+}
+message PBTariffTransaction {
+   PBTxType txType                                      = 2 ;
+   PBCustomerInfo customerInfo                        = 3 ;
+   int32 customerCount                              = 4 ;           
+   double kWh                                       = 5 ;           
+   double charge                                    = 6 ;           
+   bool regulation                                  = 7 ;           
+   PBTariffSpecification tariffSpec                   = 8 ;
+}                                                              
+message PBBalancingControlEvent {                                
+   double kwh                                       = 1 ;           
+   double payment                                   = 2 ;           
+}                                                              
+
+message PBTariffRevoke {
+   int64 tariffId                                   = 1 ;
+   int64 id                                         = 2 ;
+   PBBroker broker                                  = 3 ;
+}
+
