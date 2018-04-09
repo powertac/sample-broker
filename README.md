@@ -41,7 +41,7 @@ Power TAC and other competitive simulations are research tools. A major advantag
 
 `mvn clean package`
 
-which will produce a file `target/name.jar`, where `name` is the "name" element near the top of the pom.xml. All classpath resources will be included (files in `src/main/resources`) in addition to the compiled classes and all dependencies. To share your broker, you need to bundle the executable jar with any configuration files needed by your implementation that are not on the classpath (such as broker.properties), and of course a README file that tells others how to use it.
+which will produce a file `target/${artifactId}-${version}.jar`, corresponding to the `artifactId` and `version` tags near the top of the pom.xml. All classpath resources will be included (files in `src/main/resources`) in addition to the compiled classes and all dependencies. To share your broker, you need to bundle the executable jar with any configuration files needed by your implementation that are not on the classpath (such as broker.properties), and of course a README file that tells others how to use it.
 
 You can then run your broker agent as
 
