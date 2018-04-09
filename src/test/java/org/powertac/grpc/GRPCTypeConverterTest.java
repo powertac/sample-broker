@@ -16,22 +16,15 @@
 
 package org.powertac.grpc;
 
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.GeneratedMessageV3;
 import de.pascalwhoop.powertac.grpc.PBBankTransaction;
 import de.pascalwhoop.powertac.grpc.PBBroker;
 import de.pascalwhoop.powertac.grpc.PBMarketBootstrapData;
 import de.pascalwhoop.powertac.grpc.PBTimeslot;
-import org.apache.commons.beanutils.BeanUtils;
 import org.junit.Test;
 import org.powertac.common.BankTransaction;
 import org.powertac.common.Broker;
 import org.powertac.common.Competition;
-import org.powertac.common.Timeslot;
 import org.powertac.common.msg.MarketBootstrapData;
-
-import java.lang.reflect.InvocationTargetException;
-import java.util.*;
 
 import static org.junit.Assert.assertEquals;
 

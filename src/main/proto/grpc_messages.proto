@@ -42,11 +42,13 @@ service PortfolioManagerService {
 
 service SubmitAdapter {
     rpc submitOrder                     (PBOrder) returns (PBCallCompleted){}
+    rpc submitTariffSpec                (PBTariffSpecification) returns (PBCallCompleted){}
+    //TODO all possible submissions
 }
 
-service IncomingMessagesService{
-    rpc handleAnyMessage                (PBRequestStream) returns  (stream PBAnyMessageContainer){}
-}
+//service IncomingMessagesService{
+//    rpc handleAnyMessage                (PBRequestStream) returns  (stream PBAnyMessageContainer){}
+//}
 
 // ENUMS
 // ====================================================
@@ -98,45 +100,45 @@ enum PBStatus {
 // Mother of all messages --> can be used as a container for any other
 // message and therefore, just one service needs to be exposed. Not sure
 // yet which one is better, I'll try both. for now.
-message PBAnyMessageContainer{
-    oneof messages {
-        PBActivate                   pBActivate                      = 1  ;
-        PBBalanceReport              pBBalanceReport                 = 2  ;
-        PBBalancingControlEvent      pBBalancingControlEvent         = 3  ;
-        PBBalancingTransaction       pBBalancingTransaction          = 4  ;
-        PBBankTransaction            pBBankTransaction               = 5  ;
-        PBBroker                     pBBroker                        = 6  ;
-        PBCallCompleted              pBCallCompleted                 = 7  ;
-        PBCapacityTransaction        pBCapacityTransaction           = 8  ;
-        PBCashPosition               pBCashPosition                  = 9  ;
-        PBClearedTrade               pBClearedTrade                  = 10 ;
-        PBCompetition                pBCompetition                   = 11 ;
-        PBCustomerBootstrapData      pBCustomerBootstrapData         = 12 ;
-        PBCustomerInfo               pBCustomerInfo                  = 13 ;
-        PBCustomer                   pBCustomer                      = 14 ;
-        PBDistributionReport         pBDistributionReport            = 15 ;
-        PBDistributionTransaction    pBDistributionTransaction       = 16 ;
-        PBMarketBootstrapData        pBMarketBootstrapData           = 17 ;
-        PBMarketPosition             pBMarketPosition                = 18 ;
-        PBMarketTransaction          pBMarketTransaction             = 19 ;
-        PBOrderbookOrder             pBOrderbookOrder                = 20 ;
-        PBOrderbook                  pBOrderbook                     = 21 ;
-        PBOrder                      pBOrder                         = 22 ;
-        PBPowerType                  pBPowerType                     = 23 ;
-        PBProperties                 pBProperties                    = 24 ;
-        PBRateCore                   pBRateCore                      = 25 ;
-        PBRequestStream              pBRequestStream                 = 26 ;
-        PBRetailKPIHolder            pBRetailKPIHolder               = 27 ;
-        PBTariffRevoke               pBTariffRevoke                  = 28 ;
-        PBTariffSpecification        pBTariffSpecification           = 29 ;
-        PBTariffStatus               pBTariffStatus                  = 30 ;
-        PBTariffTransaction          pBTariffTransaction             = 31 ;
-        PBTimeslot                   pBTimeslot                      = 32 ;
-        PBWeatherForecast            pBWeatherForecast               = 33 ;
-        PBWeatherForecastPrediction  pBWeatherForecastPrediction     = 34 ;
-        PBWeatherReport              pBWeatherReport                 = 35 ;
-    }
-}
+//message PBAnyMessageContainer{
+//    oneof messages {
+//        PBActivate                   pBActivate                      = 1  ;
+//        PBBalanceReport              pBBalanceReport                 = 2  ;
+//        PBBalancingControlEvent      pBBalancingControlEvent         = 3  ;
+//        PBBalancingTransaction       pBBalancingTransaction          = 4  ;
+//        PBBankTransaction            pBBankTransaction               = 5  ;
+//        PBBroker                     pBBroker                        = 6  ;
+//        PBCallCompleted              pBCallCompleted                 = 7  ;
+//        PBCapacityTransaction        pBCapacityTransaction           = 8  ;
+//        PBCashPosition               pBCashPosition                  = 9  ;
+//        PBClearedTrade               pBClearedTrade                  = 10 ;
+//        PBCompetition                pBCompetition                   = 11 ;
+//        PBCustomerBootstrapData      pBCustomerBootstrapData         = 12 ;
+//        PBCustomerInfo               pBCustomerInfo                  = 13 ;
+//        PBCustomer                   pBCustomer                      = 14 ;
+//        PBDistributionReport         pBDistributionReport            = 15 ;
+//        PBDistributionTransaction    pBDistributionTransaction       = 16 ;
+//        PBMarketBootstrapData        pBMarketBootstrapData           = 17 ;
+//        PBMarketPosition             pBMarketPosition                = 18 ;
+//        PBMarketTransaction          pBMarketTransaction             = 19 ;
+//        PBOrderbookOrder             pBOrderbookOrder                = 20 ;
+//        PBOrderbook                  pBOrderbook                     = 21 ;
+//        PBOrder                      pBOrder                         = 22 ;
+//        PBPowerType                  pBPowerType                     = 23 ;
+//        PBProperties                 pBProperties                    = 24 ;
+//        PBRateCore                   pBRateCore                      = 25 ;
+//        PBRequestStream              pBRequestStream                 = 26 ;
+//        PBRetailKPIHolder            pBRetailKPIHolder               = 27 ;
+//        PBTariffRevoke               pBTariffRevoke                  = 28 ;
+//        PBTariffSpecification        pBTariffSpecification           = 29 ;
+//        PBTariffStatus               pBTariffStatus                  = 30 ;
+//        PBTariffTransaction          pBTariffTransaction             = 31 ;
+//        PBTimeslot                   pBTimeslot                      = 32 ;
+//        PBWeatherForecast            pBWeatherForecast               = 33 ;
+//        PBWeatherForecastPrediction  pBWeatherForecastPrediction     = 34 ;
+//        PBWeatherReport              pBWeatherReport                 = 35 ;
+//    }
+//}
 
 //system message, not related to powertac
 message PBCallCompleted {
@@ -156,8 +158,8 @@ message PBActivate{
 
 message PBOrder {
     int64 id                                      = 1 ;
-    PBBroker broker                               = 2 ;
-    PBTimeslot timeslot                                = 3 ;
+    string broker                               = 2 ;
+    int32 timeslot                                = 3 ;
     double mWh                                    = 4 ;
     double limitPrice                             = 5 ; //TODO is Double in powertac
 }
@@ -226,40 +228,40 @@ message PBRetailKPIHolder {
 }                                                              
 message PBBankTransaction {                                      
     int64 id                                        = 1 ;
-    PBBroker broker                                 = 2 ;
-    PBTimeslot  postedTimeslot                           = 3 ;
+    string broker                                 = 2 ;
+    int32  postedTimeslot                           = 3 ;
     double amount                                   = 4 ;         
 }                                                              
 message PBCashPosition {                                         
     int64 id                                        = 1 ;
-    PBBroker broker                                 = 2 ;
-    PBTimeslot  postedTimeslot                           = 3 ;
+    string broker                                 = 2 ;
+    int32  postedTimeslot                           = 3 ;
     double balance                                  = 4 ;           
 }                                                              
 message PBDistributionReport {                                   
     int64  id                                       = 1 ;           
-    PBTimeslot timeslot                                 = 2 ;
+    int32 timeslot                                 = 2 ;
     double totalConsumption                         = 3 ;           
     double totalProduction                          = 4 ;           
 }                                                              
 message PBBalancingTransaction {                                 
     int64 id                                        = 1 ;
-    PBBroker broker                                 = 2 ;
-    PBTimeslot  postedTimeslot                           = 3 ;
+    string broker                                 = 2 ;
+    int32  postedTimeslot                           = 3 ;
     double kWh                                      = 4 ;           
     double charge                                   = 5 ;           
 }                                                              
 message PBClearedTrade {                                         
     int64 id                                        = 1 ;           
-    PBTimeslot timeslot                                  = 2 ;
+    int32 timeslot                                  = 2 ;
     double executionPrice                           = 3 ;           
     double executionMWh                             = 4 ;           
     int64 dateExecuted                              = 5 ;           
 }                                                   
 message PBDistributionTransaction {                   
     int64 id                                        = 1 ;
-    PBBroker broker                                 = 2 ;
-    PBTimeslot postedTimeslot                            = 3 ;
+    string broker                                 = 2 ;
+    int32 postedTimeslot                            = 3 ;
     double kWh                                      = 4 ;           
     int32 nSmall                                    = 5 ;           
     int32 nLarge                                    = 6 ;           
@@ -267,8 +269,8 @@ message PBDistributionTransaction {
 }                                                              
 message PBCapacityTransaction {                                  
     int64 id                                        = 1 ;
-    PBBroker broker                                 = 2 ;
-    PBTimeslot postedTimeslot                            = 3 ;
+    string broker                                 = 2 ;
+    int32 postedTimeslot                            = 3 ;
     int32 peakTimeslot                              = 4 ;           
     double threshold                                = 5 ;           
     double kWh                                      = 6 ;           
@@ -281,8 +283,8 @@ message PBMarketBootstrapData {
    }
 message PBMarketPosition {
     int64 id                                        = 1 ;           
-    PBBroker broker                                 = 2 ;
-    PBTimeslot timeslot                                  = 3 ;
+    string broker                                 = 2 ;
+    int32 timeslot                                  = 3 ;
     double overallBalance                           = 4 ;           
 }
 message PBTimeslot {
@@ -292,16 +294,16 @@ message PBTimeslot {
 }
 message PBMarketTransaction {
     int64 id                                        = 1 ;
-    PBBroker broker                                 = 2 ;
-    PBTimeslot postedTimeslot                            = 3 ;
+    string broker                                 = 2 ;
+    int32 postedTimeslot                            = 3 ;
     double price                                    = 4 ;           
     double mWh                                      = 5 ;           
-    PBTimeslot timeslot                                  = 6 ;
+    int32 timeslot                                  = 6 ;
 }                                                              
 message PBOrderbook {                                            
     int64 id                                        = 1 ;           
     int64 dateExecuted                              = 2 ; //TODO instant
-    PBTimeslot timeslot                                  = 3 ;
+    int32 timeslot                                  = 3 ;
     double clearingPrice                            = 4 ;
     repeated PBOrderbookOrder bids                  = 6 ;
       repeated PBOrderbookOrder asks                = 8 ;
@@ -370,7 +372,7 @@ message PBRateCore {
 
 message PBTariffSpecification {                                  
    int64 id                                          = 1 ;           
-   PBBroker broker                                   = 2 ;
+   string broker                                   = 2 ;
    int64 expiration                               = 3 ;
    int64 minDuration                                = 4 ;
    PBPowerType powerType                              = 5 ;
@@ -403,7 +405,7 @@ message PBBalancingControlEvent {
 message PBTariffRevoke {
    int64 tariffId                                   = 1 ;
    int64 id                                         = 2 ;
-   PBBroker broker                                  = 3 ;
+   string broker                                  = 3 ;
 }
 
 message PBProperties {

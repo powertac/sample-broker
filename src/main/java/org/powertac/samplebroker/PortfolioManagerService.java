@@ -32,8 +32,6 @@ import org.powertac.common.Rate;
 import org.powertac.common.RegulationRate;
 import org.powertac.common.RegulationRate.ResponseTime;
 import org.powertac.common.TariffSpecification;
-import org.powertac.common.TariffTransaction;
-import org.powertac.common.TimeService;
 import org.powertac.common.config.ConfigurableValue;
 import org.powertac.common.enumerations.PowerType;
 import org.powertac.common.msg.BalancingControlEvent;
