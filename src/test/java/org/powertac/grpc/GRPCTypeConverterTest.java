@@ -20,11 +20,15 @@ import de.pascalwhoop.powertac.grpc.PBBankTransaction;
 import de.pascalwhoop.powertac.grpc.PBBroker;
 import de.pascalwhoop.powertac.grpc.PBMarketBootstrapData;
 import de.pascalwhoop.powertac.grpc.PBTimeslot;
+import org.joda.time.Instant;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.powertac.common.BankTransaction;
 import org.powertac.common.Broker;
 import org.powertac.common.Competition;
+import org.powertac.common.Timeslot;
 import org.powertac.common.msg.MarketBootstrapData;
+import org.powertac.common.repo.TimeslotRepo;
 
 import static org.junit.Assert.assertEquals;
 
@@ -66,9 +70,10 @@ public class GRPCTypeConverterTest {
 
     @Test
     public void bankTransactionC() {
-        BankTransaction in = ValueGenerator.bankTransaction;
-        PBBankTransaction out = conv.bankTransactionC(in);
-        assertEquals(in.getAmount(), out.getAmount(), 0);
+        BankTransaction spy = Mockito.spy(ValueGenerator.bankTransaction);
+        Mockito.doReturn(new Timeslot(ValueGenerator.INT, new Instant(8))).when(spy).getPostedTimeslot();
+        PBBankTransaction out = conv.bankTransactionC(spy);
+        assertEquals(spy.getAmount(), out.getAmount(), 0);
     }
 
     @Test
@@ -78,6 +83,8 @@ public class GRPCTypeConverterTest {
     @Test
     public void brokerC() {
         Broker in = ValueGenerator.broker;
+        in.setKey(ValueGenerator.STRING);
+        in.setPassword(ValueGenerator.STRING);
         PBBroker out = conv.brokerC(in);
         assertEquals(in.getUsername(), out.getUsername());
     }

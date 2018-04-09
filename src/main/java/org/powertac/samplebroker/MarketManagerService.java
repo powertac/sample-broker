@@ -20,15 +20,7 @@ import java.util.Random;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
-import org.powertac.common.BalancingTransaction;
-import org.powertac.common.CapacityTransaction;
-import org.powertac.common.ClearedTrade;
-import org.powertac.common.Competition;
-import org.powertac.common.DistributionTransaction;
-import org.powertac.common.MarketPosition;
-import org.powertac.common.MarketTransaction;
-import org.powertac.common.Order;
-import org.powertac.common.Orderbook;
+import org.powertac.common.*;
 import org.powertac.common.config.ConfigurableValue;
 import org.powertac.common.msg.BalanceReport;
 import org.powertac.common.msg.MarketBootstrapData;

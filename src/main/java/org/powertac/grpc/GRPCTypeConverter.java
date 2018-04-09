@@ -63,12 +63,12 @@ public class GRPCTypeConverter
         .build();
   }
 
-  public PBBankTransaction bankTransactionC(BankTransaction btx)
+  public PBBankTransaction bankTransactionC(BankTransaction in)
   {
     return PBBankTransaction.newBuilder()
-        .setId(btx.getId())
-        .setAmount(btx.getAmount())
-        .setPostedTimeslot(timeslotC(btx.getPostedTimeslot()).getSerialNumber())
+        .setId(in.getId())
+        .setAmount(in.getAmount())
+        .setPostedTimeslot(in.getPostedTimeslot().getSerialNumber())
         .build();
   }
 

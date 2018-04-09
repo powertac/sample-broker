@@ -26,6 +26,8 @@ import org.joda.time.Instant;
 import org.junit.Before;
 import org.junit.Test;
 import org.powertac.common.CustomerInfo;
+import org.powertac.common.TimeService;
+import org.powertac.common.Timeslot;
 import org.powertac.common.enumerations.PowerType;
 import org.powertac.common.msg.CustomerBootstrapData;
 import org.powertac.common.repo.CustomerRepo;

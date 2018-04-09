@@ -26,6 +26,7 @@ import org.junit.Test;
 import org.powertac.common.Competition;
 import org.powertac.common.CustomerInfo;
 import org.powertac.common.IdGenerator;
+import org.powertac.common.TimeService;
 import org.powertac.common.msg.BrokerAccept;
 import org.powertac.common.repo.BrokerRepo;
 import org.powertac.common.repo.CustomerRepo;
