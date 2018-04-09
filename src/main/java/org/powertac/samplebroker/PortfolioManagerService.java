@@ -462,6 +462,19 @@ implements PortfolioManager, Initializable, Activatable
           brokerContext.sendMessage(order);
         }
       }
+      // add a battery storage tariff with overpriced regulation
+      // should get no subscriptions...
+      TariffSpecification spec = 
+              new TariffSpecification(brokerContext.getBroker(),
+                                      PowerType.BATTERY_STORAGE);
+      Rate rate = new Rate().withValue(-0.2);
+      spec.addRate(rate);
+      RegulationRate rr = new RegulationRate();
+      rr.withUpRegulationPayment(10.0)
+      .withDownRegulationPayment(-10.0); // magic numbers
+      spec.addRate(rr);
+      tariffRepo.addSpecification(spec);
+      brokerContext.sendMessage(spec);
     }
     // magic-number hack to supersede a tariff
     if (380 == timeslotIndex) {
