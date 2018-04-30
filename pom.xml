@@ -5,10 +5,10 @@
 
   <modelVersion>4.0.0</modelVersion>
 
-  <artifactId>sample-broker</artifactId>
+  <artifactId>python-broker-proxy</artifactId>
   <packaging>jar</packaging>
 
-  <name>sample-broker</name>
+  <name>python-broker-proxy</name>
   <description>Standalone or server-resident sample broker implementation</description>
   <url>http://www.powertac.org/</url>
 
@@ -22,6 +22,9 @@
   <properties>
     <powertac.version>1.5.1-SNAPSHOT</powertac.version>
     <maven-shade.version>2.4.3</maven-shade.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <protobuf.version>3.5.1</protobuf.version>
+    <grpc.version>1.10.0</grpc.version><!-- CURRENT_GRPC_VERSION -->
     <exec.args></exec.args>
     <syst.args></syst.args>
   </properties>
@@ -41,6 +44,7 @@
       <groupId>org.powertac</groupId>
       <artifactId>broker-core</artifactId>
       <version>${powertac.version}</version>
+
     </dependency>
 
 
@@ -56,12 +60,75 @@
       <artifactId>mockito-core</artifactId>
     </dependency>
 
+    <!--ProtoBuf , this is to transmit to other clients-->
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+      <version>${protobuf.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java-util</artifactId>
+      <version>${protobuf.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-netty</artifactId>
+      <version>1.10.0</version>
+    </dependency>
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-protobuf</artifactId>
+      <version>1.10.0</version>
+    </dependency>
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-stub</artifactId>
+      <version>1.10.0</version>
+    </dependency>
+
+    <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-core -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <version>2.9.5</version>
+    </dependency>
+
+
   </dependencies>
 
 
   <build>
+    <extensions>
+      <extension>
+        <groupId>kr.motd.maven</groupId>
+        <artifactId>os-maven-plugin</artifactId>
+        <version>1.5.0.Final</version>
+      </extension>
+    </extensions>
 
     <plugins>
+      <!--Generates GRPC Code from .proto files-->
+      <plugin>
+        <groupId>org.xolstice.maven.plugins</groupId>
+        <artifactId>protobuf-maven-plugin</artifactId>
+        <version>0.5.0</version>
+        <configuration>
+          <protocArtifact>com.google.protobuf:protoc:3.5.1-1:exe:${os.detected.classifier}</protocArtifact>
+          <pluginId>grpc-java</pluginId>
+          <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>compile</goal>
+              <goal>compile-custom</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
 
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -75,7 +142,8 @@
         </executions>
         <configuration>
           <executable>java</executable>
-          <commandlineArgs>-server -Xmx512m -classpath %classpath ${syst.args} org.powertac.samplebroker.core.BrokerMain ${exec.args}</commandlineArgs>
+          <commandlineArgs>-server -Xmx512m -classpath %classpath ${syst.args} org.powertac.samplebroker.core.BrokerMain
+            ${exec.args}</commandlineArgs>
         </configuration>
       </plugin>
 

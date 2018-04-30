@@ -15,35 +15,42 @@
  */
 package org.powertac.samplebroker;
 
-import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.powertac.common.BankTransaction;
 import org.powertac.common.CashPosition;
 import org.powertac.common.Competition;
 import org.powertac.common.msg.DistributionReport;
+import org.powertac.grpc.GrpcServiceChannel;
 import org.powertac.samplebroker.interfaces.BrokerContext;
 import org.powertac.samplebroker.interfaces.Initializable;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * Handles incoming context and bank messages with example behaviors. 
+ * Handles incoming context and bank messages with example behaviors.
+ *
  * @author John Collins
  */
 @Service
 public class ContextManagerService
-implements Initializable
+    implements Initializable
 {
   static private Logger log = LogManager.getLogger(ContextManagerService.class);
 
+  @Autowired
   BrokerContext master;
+
+  @Autowired
+  GrpcServiceChannel comm;
 
   // current cash balance
   private double cash = 0;
-  
 
-//  @SuppressWarnings("unchecked")
+
+  //  @SuppressWarnings("unchecked")
   @Override
-  public void initialize (BrokerContext broker)
+  public void initialize(BrokerContext broker)
   {
     master = broker;
 // --- no longer needed ---
@@ -60,49 +67,49 @@ implements Initializable
   //
   // Note that these arrive in JMS threads; If they share data with the
   // agent processing thread, they need to be synchronized.
-  
+
   /**
-   * BankTransaction represents an interest payment. Value is positive for 
-   * credit, negative for debit. 
+   * BankTransaction represents an interest payment. Value is positive for
+   * credit, negative for debit.
    */
-  public void handleMessage (BankTransaction btx)
+  public void handleMessage(BankTransaction btx)
   {
-    // TODO - handle this
+    comm.contextStub.handlePBBankTransaction(comm.converter.convert(btx));
   }
 
   /**
    * CashPosition updates our current bank balance.
    */
-  public void handleMessage (CashPosition cp)
+  public void handleMessage(CashPosition cp)
   {
-    cash = cp.getBalance();
-    log.info("Cash position: " + cash);
+    comm.contextStub.handlePBCashPosition(comm.converter.convert(cp));
   }
-  
+
   /**
    * DistributionReport gives total consumption and production for the timeslot,
    * summed across all brokers.
    */
-  public void handleMessage (DistributionReport dr)
+  public void handleMessage(DistributionReport dr)
   {
-    // TODO - use this data
+    comm.contextStub.handlePBDistributionReport(comm.converter.convert(dr));
   }
-  
+
   /**
    * Handles the Competition instance that arrives at beginning of game.
    * Here we capture all the customer records so we can keep track of their
    * subscriptions and usage profiles.
    */
-  public void handleMessage (Competition comp)
+  public void handleMessage(Competition comp)
   {
-    // TODO - process competition properties
+    comm.contextStub.handlePBCompetition(comm.converter.convert(comp));
   }
 
   /**
    * Receives the server configuration properties.
    */
-  public void handleMessage (java.util.Properties serverProps)
+  public void handleMessage(java.util.Properties serverProps)
   {
-    // TODO - adapt to the server setup.
+    //TODO do I need this?
+    //comm.contextStub.handS(comm.converter.convert(dr));
   }
 }

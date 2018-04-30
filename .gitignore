@@ -18,3 +18,7 @@ hs_err_pid*
 /target/
 /log/
 *~
+
+#ignoring intellij project files
+.idea
+*.iml
