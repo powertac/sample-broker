@@ -22,6 +22,7 @@ import org.powertac.common.*;
 import org.powertac.common.config.ConfigurableValue;
 import org.powertac.common.enumerations.PowerType;
 import org.powertac.common.msg.*;
+
 import org.powertac.common.repo.CustomerRepo;
 import org.powertac.common.repo.TariffRepo;
 import org.powertac.common.repo.TimeslotRepo;
@@ -420,6 +421,19 @@ public class PortfolioManagerService
           brokerContext.sendMessage(order);
         }
       }
+      // add a battery storage tariff with overpriced regulation
+      // should get no subscriptions...
+      TariffSpecification spec = 
+              new TariffSpecification(brokerContext.getBroker(),
+                                      PowerType.BATTERY_STORAGE);
+      Rate rate = new Rate().withValue(-0.2);
+      spec.addRate(rate);
+      RegulationRate rr = new RegulationRate();
+      rr.withUpRegulationPayment(10.0)
+      .withDownRegulationPayment(-10.0); // magic numbers
+      spec.addRate(rr);
+      tariffRepo.addSpecification(spec);
+      brokerContext.sendMessage(spec);
     }
     // magic-number hack to supersede a tariff
     if (380 == timeslotIndex) {
@@ -459,6 +473,16 @@ public class PortfolioManagerService
               new TariffRevoke(brokerContext.getBroker(), oldc);
           brokerContext.sendMessage(revoke);
         }
+      }
+    }
+    // Exercise economic controls every 4 timeslots
+    if ((timeslotIndex % 4) == 3) {
+      List<TariffSpecification> candidates =
+              tariffRepo.findTariffSpecificationsByPowerType(PowerType.INTERRUPTIBLE_CONSUMPTION);
+      for (TariffSpecification spec: candidates) {
+        EconomicControlEvent ece =
+                new EconomicControlEvent(spec, 0.2, timeslotIndex + 1);
+        brokerContext.sendMessage(ece);
       }
     }
   }
