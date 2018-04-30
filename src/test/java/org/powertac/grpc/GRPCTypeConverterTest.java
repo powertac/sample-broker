@@ -16,19 +16,19 @@
 
 package org.powertac.grpc;
 
-import de.pascalwhoop.powertac.grpc.PBBankTransaction;
-import de.pascalwhoop.powertac.grpc.PBBroker;
-import de.pascalwhoop.powertac.grpc.PBMarketBootstrapData;
-import de.pascalwhoop.powertac.grpc.PBTimeslot;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import de.pascalwhoop.powertac.grpc.*;
 import org.joda.time.Instant;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.powertac.common.BankTransaction;
-import org.powertac.common.Broker;
-import org.powertac.common.Competition;
-import org.powertac.common.Timeslot;
+import org.powertac.common.*;
 import org.powertac.common.msg.MarketBootstrapData;
-import org.powertac.common.repo.TimeslotRepo;
+import org.springframework.test.util.ReflectionTestUtils;
+import sun.awt.image.ImageWatched;
+
+import java.util.LinkedList;
 
 import static org.junit.Assert.assertEquals;
 
@@ -40,18 +40,8 @@ public class GRPCTypeConverterTest {
     public void testSimpleConversions() {
         //BeanUtils.copyProperties(null, null);
         MarketBootstrapData in = ValueGenerator.marketBootstrapData;
-        PBMarketBootstrapData out = conv.marketBootstrapDataC(in);
+        PBMarketBootstrapData out = conv.convert(in);
         assertEquals(in.getId(), out.getId());
-    }
-
-    @Test
-    public void testDozerBrokerConversion() {
-
-    }
-
-
-    @Test
-    public void testComplexConversion() {
     }
 
 
@@ -62,7 +52,7 @@ public class GRPCTypeConverterTest {
     @Test
     public void timeslotC() {
         Timeslot timeslot = ValueGenerator.timeslot;
-        PBTimeslot pbTimeslot = conv.timeslotC(timeslot);
+        PBTimeslot pbTimeslot = conv.convert(timeslot);
         assertEquals(pbTimeslot.getSerialNumber(), timeslot.getSerialNumber());
         assertEquals(pbTimeslot.getStartInstant(), timeslot.getStartInstant().getMillis());
     }
@@ -72,7 +62,7 @@ public class GRPCTypeConverterTest {
     public void bankTransactionC() {
         BankTransaction spy = Mockito.spy(ValueGenerator.bankTransaction);
         Mockito.doReturn(new Timeslot(ValueGenerator.INT, new Instant(8))).when(spy).getPostedTimeslot();
-        PBBankTransaction out = conv.bankTransactionC(spy);
+        PBBankTransaction out = conv.convert(spy);
         assertEquals(spy.getAmount(), out.getAmount(), 0);
     }
 
@@ -85,56 +75,37 @@ public class GRPCTypeConverterTest {
         Broker in = ValueGenerator.broker;
         in.setKey(ValueGenerator.STRING);
         in.setPassword(ValueGenerator.STRING);
-        PBBroker out = conv.brokerC(in);
+        PBBroker out = conv.convert(in);
         assertEquals(in.getUsername(), out.getUsername());
     }
 
 
-    @Test
-    public void instantC() {
-    }
 
     @Test
-    public void cashPositionC() {
+    public void basicConversionToPB() throws JsonProcessingException
+    {
+        TariffSpecification in = ValueGenerator.tariffSpecification;
+        in.withExpiration(Instant.now())
+            .addSupersedes(1234);
+        PBTariffSpecification out = conv.convert(in);
+        assertEquals(in.getSupersedes(), out.getSupersedesList());
     }
 
-    @Test
-    public void distributionReportC() {
-    }
 
     @Test
-    public void competitionC() {
+    public void listConvert() throws JsonProcessingException
+    {
+        LinkedList<Rate> rates = new LinkedList<>();
+        Rate r = new Rate().withDailyBegin(1).withDailyEnd(2);
+        ReflectionTestUtils.setField(r, "timeService", new TimeService());
+        rates.add(r);
+        
+        Iterable<PBRate> out = conv.listConvert(rates, Rate.class, PBRate.class);
+        for (PBRate pbRate :
+            out) {
+            assertEquals(1, pbRate.getDailyBegin());
+        }
+
     }
 
-    @Test
-    public void customerInfoC() {
-    }
-
-    @Test
-    public void customerInfoC1() {
-    }
-
-    @Test
-    public void powerTypeC() {
-    }
-
-    @Test
-    public void powerTypeC1() {
-    }
-
-    @Test
-    public void propertiesC() {
-    }
-
-    @Test
-    public void marketBootstrapDataC() {
-    }
-
-    @Test
-    public void basicConversionToPB() {
-    }
-
-    @Test
-    public void copyProperties() {
-    }
 }

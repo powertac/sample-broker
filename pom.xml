@@ -89,6 +89,14 @@
       <version>1.10.0</version>
     </dependency>
 
+    <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-core -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <version>2.9.5</version>
+    </dependency>
+
+
   </dependencies>
 
 
@@ -134,7 +142,8 @@
         </executions>
         <configuration>
           <executable>java</executable>
-          <commandlineArgs>-server -Xmx512m -classpath %classpath ${syst.args} org.powertac.grpc.BrokerMainGrpc ${exec.args}</commandlineArgs>
+          <commandlineArgs>-server -Xmx512m -classpath %classpath ${syst.args} org.powertac.samplebroker.core.BrokerMain
+            ${exec.args}</commandlineArgs>
         </configuration>
       </plugin>
 

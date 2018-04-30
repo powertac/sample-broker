@@ -16,10 +16,17 @@
 
 package org.powertac.grpc;
 
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.GeneratedMessageV3;
 import de.pascalwhoop.powertac.grpc.*;
+import org.apache.commons.beanutils.BeanUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.joda.time.Instant;
 import org.powertac.common.*;
 import org.powertac.common.enumerations.PowerType;
+import org.powertac.common.msg.BalanceReport;
+import org.powertac.common.msg.CustomerBootstrapData;
 import org.powertac.common.msg.DistributionReport;
 import org.powertac.common.msg.MarketBootstrapData;
 import org.powertac.common.repo.BrokerRepo;
@@ -28,10 +35,9 @@ import org.powertac.common.xml.BrokerConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Enumeration;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Properties;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.*;
 
 /**
  * Helper class that converts all types forth and back between PB versions and powerTAC originals
@@ -44,18 +50,18 @@ public class GRPCTypeConverter
   BrokerRepo brokerRepo;
   @Autowired
   TimeslotRepo timeslotRepo;
-
+  Logger log = LogManager.getLogger(GRPCTypeConverter.class);
 
   public GRPCTypeConverter()
   {
   }
 
-  public Timeslot timeslotC(PBTimeslot p)
+  public Timeslot convert(PBTimeslot p)
   {
-    return new Timeslot(p.getSerialNumber(), instantC(p.getStartInstant()));
+    return new Timeslot(p.getSerialNumber(), convert(p.getStartInstant()));
   }
 
-  public PBTimeslot timeslotC(Timeslot t)
+  public PBTimeslot convert(Timeslot t)
   {
     return PBTimeslot.newBuilder()
         .setSerialNumber(t.getSerialNumber())
@@ -63,7 +69,7 @@ public class GRPCTypeConverter
         .build();
   }
 
-  public PBBankTransaction bankTransactionC(BankTransaction in)
+  public PBBankTransaction convert(BankTransaction in)
   {
     return PBBankTransaction.newBuilder()
         .setId(in.getId())
@@ -72,7 +78,7 @@ public class GRPCTypeConverter
         .build();
   }
 
-  public BankTransaction bankTransactionC(PBBankTransaction pbbtx)
+  public BankTransaction convert(PBBankTransaction pbbtx)
   {
     return new BankTransaction(
         brokerRepo.findByUsername(pbbtx.getBroker()),
@@ -80,12 +86,12 @@ public class GRPCTypeConverter
         pbbtx.getPostedTimeslot());
   }
 
-  public Broker brokerC(PBBroker pbb)
+  public Broker convert(PBBroker pbb)
   {
     return new Broker(pbb.getUsername(), pbb.getLocal(), pbb.getWholesale());
   }
 
-  public PBBroker brokerC(Broker b)
+  public PBBroker convert(Broker b)
   {
     return PBBroker.newBuilder()
         .setId(b.getId())
@@ -102,22 +108,22 @@ public class GRPCTypeConverter
         .build();
   }
 
-  public Instant instantC(long i)
+  public Instant convert(long i)
   {
     return new Instant(i);
   }
 
-  public PBCashPosition cashPositionC(CashPosition cp)
+  public PBCashPosition convert(CashPosition cp)
   {
     return PBCashPosition.newBuilder()
         .setId(cp.getId())
         .setBroker(new BrokerConverter().toString(cp.getBroker()))
-        .setPostedTimeslot(timeslotC(cp.getPostedTimeslot()).getSerialNumber())
+        .setPostedTimeslot(convert(cp.getPostedTimeslot()).getSerialNumber())
         .setBalance(cp.getBalance())
         .build();
   }
 
-  public PBDistributionReport distributionReportC(DistributionReport dr)
+  public PBDistributionReport convert(DistributionReport dr)
   {
     return PBDistributionReport.newBuilder()
         .setId(dr.getId())
@@ -127,7 +133,7 @@ public class GRPCTypeConverter
         .build();
   }
 
-  public PBCompetition competitionC(Competition comp)
+  public PBCompetition convert(Competition comp)
   {
     return PBCompetition.newBuilder()
         .setId(comp.getId())
@@ -148,44 +154,44 @@ public class GRPCTypeConverter
         .setSimulationRate(comp.getSimulationRate())
         .setSimulationModulo(comp.getSimulationModulo())
         .addAllBrokers(comp.getBrokers())
-        .addAllCustomer(customerInfoC(comp.getCustomers()))
+        .addAllCustomer(convert(comp.getCustomers()))
         .build();
   }
 
-  public PBCustomerInfo customerInfoC(CustomerInfo ci)
+  public PBCustomerInfo convert(CustomerInfo ci)
   {
     return PBCustomerInfo.newBuilder()
         .setId(ci.getId())
         .setName(ci.getName())
         .setPopulation(ci.getPopulation())
-        .setPowerType(powerTypeC(ci.getPowerType()))
+        .setPowerType(convert(ci.getPowerType()))
         .setControllableKW(ci.getControllableKW())
         .setCustomerClass(PBCustomerClass.forNumber(ci.getCustomerClass().ordinal()))
         .build();
   }
 
-  public List<PBCustomerInfo> customerInfoC(List<CustomerInfo> cil)
+  public List<PBCustomerInfo> convert(List<CustomerInfo> cil)
   {
     LinkedList<PBCustomerInfo> l = new LinkedList<>();
     for (CustomerInfo c : cil) {
-      l.add(customerInfoC(c));
+      l.add(convert(c));
     }
     return l;
   }
 
-  public PBPowerType powerTypeC(PowerType pt)
+  public PBPowerType convert(PowerType pt)
   {
     return PBPowerType.newBuilder()
         .setLabel(pt.toString())
         .build();
   }
 
-  public PowerType powerTypeC(PBPowerType pbpt)
+  public PowerType convert(PBPowerType pbpt)
   {
     return PowerType.valueOf(pbpt.getLabel());
   }
 
-  public PBProperties propertiesC(Properties serverProps)
+  public PBProperties convert(Properties serverProps)
   {
     Enumeration<?> props = serverProps.propertyNames();
     PBProperties.Builder builder = PBProperties.newBuilder();
@@ -197,18 +203,211 @@ public class GRPCTypeConverter
 
   }
 
-  public PBMarketBootstrapData marketBootstrapDataC(MarketBootstrapData in)
+  public PBMarketBootstrapData convert(MarketBootstrapData in)
   {
 
     //PBMarketBootstrapData out = basicConversionToPB(PBMarketBootstrapData.class, in, PBMarketBootstrapData.newBuilder());
     //return PBMarketBootstrapData.newBuilder().mergeFrom(out)
     return PBMarketBootstrapData.newBuilder()
         .setId(in.getId())
-        .addAllMwh(convertArrToList(in.getMwh()))
-        .addAllMarketPrice(convertArrToList(in.getMarketPrice()))
+        .addAllMwh(arrayToList(in.getMwh()))
+        .addAllMarketPrice(arrayToList(in.getMarketPrice()))
         .build();
   }
-//    public  PBPowerType powerTypeC(PowerType pt){
+
+  public PBBalancingTransaction convert(BalancingTransaction tx)
+  {
+    return PBBalancingTransaction.newBuilder()
+        .setId(tx.getId())
+        .setKWh(tx.getKWh())
+        .setCharge(tx.getCharge())
+        .setBroker(tx.getBroker().getUsername())
+        .setPostedTimeslot(tx.getPostedTimeslotIndex())
+        .build();
+  }
+
+  public PBClearedTrade convert(ClearedTrade ct)
+  {
+    return PBClearedTrade.newBuilder()
+        .setId(ct.getId())
+        .setDateExecuted(ct.getDateExecuted().getMillis())
+        .setExecutionMWh(ct.getExecutionMWh())
+        .setExecutionPrice(ct.getExecutionPrice())
+        .build();
+  }
+
+  public PBDistributionTransaction convert(DistributionTransaction in)
+  {
+    return PBDistributionTransaction.newBuilder()
+        .setId(in.getId())
+        .setBroker(in.getBroker().getUsername())
+        .setCharge(in.getCharge())
+        .setKWh(in.getKWh())
+        .setNLarge(in.getNLarge())
+        .setNSmall(in.getNSmall())
+        .build();
+  }
+
+  public PBCapacityTransaction convert(CapacityTransaction in)
+  {
+    return PBCapacityTransaction.newBuilder()
+        .setId(in.getId())
+        .setBroker(in.getBroker().getUsername())
+        .setCharge(in.getCharge())
+        .setKWh(in.getKWh())
+        .setPeakTimeslot(in.getPeakTimeslot())
+        .setThreshold(in.getThreshold())
+        .build();
+  }
+
+  public PBMarketPosition convert(MarketPosition in)
+  {
+    return PBMarketPosition.newBuilder()
+        .setId(in.getId())
+        .setBroker(in.getBroker().getUsername())
+        .setOverallBalance(in.getOverallBalance())
+        .setTimeslot(in.getTimeslotIndex())
+        .build();
+
+  }
+
+  public PBMarketTransaction convert(MarketTransaction in)
+  {
+    return PBMarketTransaction.newBuilder()
+        .setId(in.getId())
+        .setBroker(in.getBroker().getUsername())
+        .setMWh(in.getMWh())
+        .setPrice(in.getPrice())
+        .setTimeslot(in.getTimeslotIndex())
+        .build();
+
+  }
+
+  public PBOrderbook convert(Orderbook in)
+  {
+    return PBOrderbook.newBuilder()
+        .setId(in.getId())
+        .addAllAsks(convert(in.getAsks()))
+        .addAllBids(convert(in.getBids()))
+        .setTimeslot(in.getTimeslotIndex())
+        .setClearingPrice(in.getClearingPrice())
+        .setDateExecuted(in.getDateExecuted().getMillis())
+        .build();
+  }
+
+  private Iterable<? extends PBOrderbookOrder> convert(SortedSet<OrderbookOrder> asks)
+  {
+    LinkedList<PBOrderbookOrder> list = new LinkedList<>();
+    for (OrderbookOrder ask : asks) {
+      list.add(convert(ask));
+    }
+    return list;
+  }
+
+  private PBOrderbookOrder convert(OrderbookOrder in)
+  {
+    return PBOrderbookOrder.newBuilder()
+        .setId(in.getId())
+        .setLimitPrice(in.getLimitPrice())
+        .setMWh(in.getMWh())
+        .build();
+  }
+
+  public PBWeatherForecast convert(WeatherForecast in)
+  {
+    return basicConversionToPB(in, PBWeatherForecast.newBuilder())
+        .setId(in.getId())
+        .setCurrentTimeslot(in.getTimeslotIndex())
+        .addAllPredictions(listConvert(in.getPredictions(), WeatherForecastPrediction.class, PBWeatherForecastPrediction.class))
+        .build();
+
+  }
+
+ // private Iterable<? extends PBWeatherForecastPrediction> convert(List<WeatherForecastPrediction> predictions)
+ // {
+ //   LinkedList<PBWeatherForecastPrediction> list = new LinkedList<>();
+ //   for (WeatherForecastPrediction prediction :
+ //       predictions) {
+ //     PBWeatherForecastPrediction pbPred = basicConversionToPB(prediction, PBWeatherForecastPrediction.newBuilder())
+ //         .build();
+ //     list.add(pbPred);
+ //   }
+ //   return list;
+ // }
+
+  public PBWeatherReport convert(WeatherReport in)
+  {
+    return basicConversionToPB(in, PBWeatherReport.newBuilder()).build();
+  }
+
+  public PBBalanceReport convert(BalanceReport in)
+  {
+    return basicConversionToPB(in, PBBalanceReport.newBuilder()).build();
+  }
+
+  public PBCustomerBootstrapData convert(CustomerBootstrapData in)
+  {
+    return basicConversionToPB(in, PBCustomerBootstrapData.newBuilder())
+        .addAllNetUsage(arrayToList(in.getNetUsage()))
+        .build();
+  }
+
+  public PBRate convert(Rate in){
+    return basicConversionToPB(in, PBRate.newBuilder())
+        .build();
+  }
+
+  public PBTariffSpecification convert(TariffSpecification in)
+  {
+
+    return basicConversionToPB(in, PBTariffSpecification.newBuilder())
+        .setBroker(in.getBroker().getUsername())
+        .setExpiration(in.getExpiration().getMillis())
+        .setPowerType(convert(in.getPowerType()))
+        .addAllRates(listConvert(in.getRates(),Rate.class,  PBRate.class))
+        .addAllRegulationRates(listConvert(in.getRegulationRates(), RegulationRate.class, PBRegulationRate.class))
+        .addAllSupersedes(in.getSupersedes())
+        .build();
+  }
+
+  /**
+   * Generates a list of
+   * @param inputList
+   * @param outputClass
+   * @param <I>
+   * @param <O>
+   * @return
+   */
+  protected <I,O extends GeneratedMessageV3> Iterable<O> listConvert(List<I> inputList, Class<I> inputClass, Class<O> outputClass)
+  {
+    LinkedList<O> list = new LinkedList<>();
+    for (I inputItem :
+        inputList) {
+
+      //TODO casting is ugly. Can we avoid it?
+      O outputItem = (O) reflectionConvertCall(inputItem, inputClass, outputClass);
+      list.add(outputItem);
+    }
+    return list;
+  }
+
+
+  protected <I, O> O reflectionConvertCall(Object input, Class<I> i, Class<O> o)
+  {
+    Class[] argClasses = {i};
+    Object[] args = {input};
+    try {
+      Method method = this.getClass().getMethod("convert", argClasses);
+      return (O) method.invoke(this, args);
+    }
+    catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+      log.error(e);
+    }
+    return null;
+  }
+
+
+//    public  PBPowerType convert(PowerType pt){
 //        //TODO using reflection here, dirty trick, there must be a better way to get this info
 //        try {
 //            Field f = pt.getClass().getDeclaredField("label");
@@ -240,7 +439,7 @@ public class GRPCTypeConverter
     ELECTRIC_VEHICLE
   }
 
-  private List<Double> convertArrToList(double[] doubles)
+  private List<Double> arrayToList(double[] doubles)
   {
     LinkedList<Double> list = new LinkedList<>();
     for (double aDouble : doubles) {
@@ -249,7 +448,7 @@ public class GRPCTypeConverter
     return list;
   }
 
-  private List<Integer> convertArrToList(int[] vals)
+  private List<Integer> arrayToList(int[] vals)
   {
     LinkedList<Integer> list = new LinkedList<>();
     for (int v : vals) {
@@ -258,114 +457,113 @@ public class GRPCTypeConverter
     return list;
   }
 
-//    /**
-//     * provides a base conversion helper that converts any basic types of an object into that of a PB version Complete
-//     * the object conversion afterwards, as this only covers the basics
-//     *
-//     * @param type
-//     * @param in
-//     * @param out
-//     * @param <T>
-//     * @return
-//     */
-//    protected <T> T basicConversionToPB(Class<T> type, Object in, GeneratedMessageV3.Builder<PBMarketBootstrapData.Builder> out) {
-//        Map<String, String> props = null;
-//        try {
-//            props = BeanUtils.describe(in);
-//        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-//            e.printStackTrace();
-//        }
-//
-//        for (Map.Entry<String, String> next : props.entrySet()) {
-//            Descriptors.FieldDescriptor fieldByName = out.getDescriptorForType().findFieldByName(next.getKey());
-//            //parsing all different types from string
-//            if (fieldByName == null) continue;
-//            try {
-//                switch (fieldByName.getType()) {
-//
-//                    case DOUBLE:
-//                        out.setField(fieldByName, Double.parseDouble(next.getValue()));
-//                        break;
-//                    case FLOAT:
-//                        out.setField(fieldByName, Float.parseFloat(next.getValue()));
-//                        break;
-//                    case INT64:
-//                        out.setField(fieldByName, Long.parseLong(next.getValue()));
-//                        break;
-//                    case UINT64:
-//                        out.setField(fieldByName, Long.parseLong(next.getValue()));
-//                        break;
-//                    case INT32:
-//                        out.setField(fieldByName, Integer.parseInt(next.getValue()));
-//                        break;
-//                    case FIXED64:
-//                        out.setField(fieldByName, Long.parseLong(next.getValue()));
-//                        break;
-//                    case FIXED32:
-//                        out.setField(fieldByName, Integer.parseInt(next.getValue()));
-//                        break;
-//                    case BOOL:
-//                        out.setField(fieldByName, Boolean.parseBoolean(next.getValue()));
-//                        break;
-//                    case STRING:
-//                        out.setField(fieldByName, next.getValue());
-//                        break;
-//                    case GROUP:
-//                        //TODO is message
-//                        break;
-//                    case MESSAGE:
-//                        //TODO is message
-//                        break;
-//                    case BYTES:
-//                        out.setField(fieldByName, next.getValue().getBytes());
-//                        break;
-//                    case UINT32:
-//                        out.setField(fieldByName, Integer.parseInt(next.getValue()));
-//                        break;
-//                    case ENUM:
-//                        //TODO check
-//                        out.setField(fieldByName, Integer.parseInt(next.getValue()));
-//                        break;
-//                    case SFIXED32:
-//                        out.setField(fieldByName, Integer.parseInt(next.getValue()));
-//                        break;
-//                    case SFIXED64:
-//                        out.setField(fieldByName, Long.parseLong(next.getValue()));
-//                        break;
-//                    case SINT32:
-//                        out.setField(fieldByName, Integer.parseInt(next.getValue()));
-//                        break;
-//                    case SINT64:
-//                        out.setField(fieldByName, Long.parseLong(next.getValue()));
-//                        break;
-//                }
-//            } catch (ClassCastException e) {
-//                //e.printStackTrace();
-//            }
-//
-//        }
-//
-//        T result = (T) out.build();
-//
-//        return (T) out.build();
-//    }
-//
-//
-//    // protected   <T> T basicConversionFromPB(Class<T> type, GeneratedMessageV3 in, T out ) {
-//    //     Map<Descriptors.FieldDescriptor, Object> fields = in.getAllFields();
-//    //     for (Map.Entry<Descriptors.FieldDescriptor, Object> next : fields.entrySet()) {
-//    //         String propertyName = next.getKey().getFullName();
-//    //         BeanUtils.
-//    //     }
-//    // }
-//
-//    protected <T> T copyProperties(Class<T> outType, GeneratedMessageV3 in, T out) {
-//        try {
-//            BeanUtils.copyProperties(in, out);
-//        } catch (IllegalAccessException | InvocationTargetException e) {
-//            //e.printStackTrace();
-//        }
-//        return out;
-//    }
+  /**
+   * provides a base conversion helper that converts any basic types of an object into that of a PB version Complete
+   * the object conversion afterwards, as this only covers the basics
+   *
+   * @return
+   */
+  protected <T extends GeneratedMessageV3.Builder<T>> T basicConversionToPB(Object in, T builder)
+  {
+    Map<String, String> props = null;
+    try {
+      props = BeanUtils.describe(in);
+    }
+    catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+      e.printStackTrace();
+    }
+
+    for (Map.Entry<String, String> next : props.entrySet()) {
+      Descriptors.FieldDescriptor fieldByName = builder.getDescriptorForType().findFieldByName(next.getKey());
+      //parsing all different types from string
+      if (fieldByName == null) continue;
+      try {
+        switch (fieldByName.getType()) {
+
+          case DOUBLE:
+            builder.setField(fieldByName, Double.parseDouble(next.getValue()));
+            break;
+          case FLOAT:
+            builder.setField(fieldByName, Float.parseFloat(next.getValue()));
+            break;
+          case INT64:
+            builder.setField(fieldByName, Long.parseLong(next.getValue()));
+            break;
+          case UINT64:
+            builder.setField(fieldByName, Long.parseLong(next.getValue()));
+            break;
+          case INT32:
+            builder.setField(fieldByName, Integer.parseInt(next.getValue()));
+            break;
+          case FIXED64:
+            builder.setField(fieldByName, Long.parseLong(next.getValue()));
+            break;
+          case FIXED32:
+            builder.setField(fieldByName, Integer.parseInt(next.getValue()));
+            break;
+          case BOOL:
+            builder.setField(fieldByName, Boolean.parseBoolean(next.getValue()));
+            break;
+          case STRING:
+            builder.setField(fieldByName, next.getValue());
+            break;
+          case GROUP:
+            //TODO is message
+            break;
+          case MESSAGE:
+            //TODO is message
+            break;
+          case BYTES:
+            builder.setField(fieldByName, next.getValue().getBytes());
+            break;
+          case UINT32:
+            builder.setField(fieldByName, Integer.parseInt(next.getValue()));
+            break;
+          case ENUM:
+            //TODO check
+            builder.setField(fieldByName, Integer.parseInt(next.getValue()));
+            break;
+          case SFIXED32:
+            builder.setField(fieldByName, Integer.parseInt(next.getValue()));
+            break;
+          case SFIXED64:
+            builder.setField(fieldByName, Long.parseLong(next.getValue()));
+            break;
+          case SINT32:
+            builder.setField(fieldByName, Integer.parseInt(next.getValue()));
+            break;
+          case SINT64:
+            builder.setField(fieldByName, Long.parseLong(next.getValue()));
+            break;
+        }
+      }
+      catch (Exception e) {
+        e.printStackTrace();
+      }
+
+    }
+
+    return builder;
+  }
+
+
+  // protected   <T> T basicConversionFromPB(Class<T> type, GeneratedMessageV3 in, T out ) {
+  //     Map<Descriptors.FieldDescriptor, Object> fields = in.getAllFields();
+  //     for (Map.Entry<Descriptors.FieldDescriptor, Object> next : fields.entrySet()) {
+  //         String propertyName = next.getKey().getFullName();
+  //         BeanUtils.
+  //     }
+  // }
+
+  protected <T> T copyProperties(Class<T> outType, GeneratedMessageV3 in, T out)
+  {
+    try {
+      BeanUtils.copyProperties(in, out);
+    }
+    catch (IllegalAccessException | InvocationTargetException e) {
+      e.printStackTrace();
+    }
+    return out;
+  }
 }
 
