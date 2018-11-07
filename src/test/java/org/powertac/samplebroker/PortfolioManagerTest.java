@@ -15,7 +15,7 @@
  */
 package org.powertac.samplebroker;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.util.Arrays;
@@ -23,8 +23,8 @@ import java.util.Arrays;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Instant;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.powertac.common.CustomerInfo;
 import org.powertac.common.TimeService;
 import org.powertac.common.Timeslot;
@@ -51,7 +51,7 @@ public class PortfolioManagerTest
   /**
    *
    */
-  @Before
+  @BeforeEach
   public void setUp () throws Exception
   {
     broker = mock(PowerTacBroker.class);
@@ -102,12 +102,12 @@ public class PortfolioManagerTest
     portfolioManagerService.handleMessage(boot);
     double[] podunkUsage = 
         portfolioManagerService.getRawUsageForCustomer(podunk).get(PowerType.CONSUMPTION);
-    assertNotNull("podunk usage is recorded", podunkUsage);
-    assertEquals("correct usage value for podunk", 1.2, podunkUsage[23], 1e-6);
+    assertNotNull(podunkUsage, "podunk usage is recorded");
+    assertEquals(1.2, podunkUsage[23], 1e-6, "correct usage value for podunk");
     double[] midvaleUsage = 
         portfolioManagerService.getRawUsageForCustomer(midvale).get(PowerType.CONSUMPTION);
-    assertNotNull("midvale usage is recorded", midvaleUsage);
-    assertEquals("correct usage value for midvale", 1.6, midvaleUsage[27], 1e-6);
+    assertNotNull(midvaleUsage, "midvale usage is recorded");
+    assertEquals(1.6, midvaleUsage[27], 1e-6, "correct usage value for midvale");
   }
   
   // other tests needed...
