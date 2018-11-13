@@ -78,17 +78,8 @@ public class SampleBrokerTest
     broker.init();
   }
   
-  /**
-   * Test method for {@link org.powertac.samplebroker.core.PowerTacBroker#SampleBroker(java.lang.String, org.powertac.samplebroker.SampleBrokerService)}.
-   */
-  @Test
-  public void testSampleBroker ()
-  {
-    assertFalse(broker.getBroker().isEnabled());
-  }
-
-  /**
-   * Test method for {@link org.powertac.samplebroker.core.PowerTacBroker#isEnabled()}.
+/**
+   * Test method for {@link org.powertac.samplebroker.core.PowerTacBroker.BrokerAdapter#isEnabled()}.
    */
   @Test
   public void testIsEnabled ()
@@ -100,7 +91,7 @@ public class SampleBrokerTest
   }
 
   /**
-   * Test method for {@link org.powertac.samplebroker.core.PowerTacBroker#receiveMessage(java.lang.Object)}.
+   * Test method for {@link org.powertac.samplebroker.core.PowerTacBroker.BrokerAdapter#receiveMessage(java.lang.Object)}.
    */
   @Test
   public void testReceiveCompetition ()
