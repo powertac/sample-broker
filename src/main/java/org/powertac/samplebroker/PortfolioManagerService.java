@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013 by the original author
+ * Copyright (c) 2012-2019 by the original author
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -417,6 +417,7 @@ implements PortfolioManager, Initializable, Activatable
         periodicValue /= 2.0;
       }
       if (pt.isStorage()) {
+        rateValue *= 0.9; // Magic number
         periodicValue = 0.0;
       }
       if (pt.isInterruptible()) {
