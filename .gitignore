@@ -1,5 +1,6 @@
 .classpath
 .project
+.factorypath
 *.class
 target/
 log/
