@@ -15,13 +15,12 @@
   <parent>
     <groupId>org.powertac</groupId>
     <artifactId>powertac-parent</artifactId>
-    <version>1.6.0-SNAPSHOT</version>
+    <version>1.7.0-SNAPSHOT</version>
     <relativePath />
   </parent>
 
   <properties>
-    <powertac.version>1.6.0-SNAPSHOT</powertac.version>
-    <maven-shade.version>2.4.3</maven-shade.version>
+    <powertac.version>1.7.0-SNAPSHOT</powertac.version>
     <exec.args></exec.args>
     <syst.args></syst.args>
   </properties>
@@ -49,7 +48,7 @@
 
     <dependency>
       <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-engine</artifactId>
+      <artifactId>junit-jupiter</artifactId>
       <version>${junit.version}</version>
       <scope>test</scope>
     </dependency>
