@@ -21,8 +21,10 @@ import org.powertac.common.BankTransaction;
 import org.powertac.common.CashPosition;
 import org.powertac.common.Competition;
 import org.powertac.common.msg.DistributionReport;
+import org.powertac.samplebroker.core.BrokerPropertiesService;
 import org.powertac.samplebroker.interfaces.BrokerContext;
 import org.powertac.samplebroker.interfaces.Initializable;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -35,6 +37,9 @@ implements Initializable
 {
   static private Logger log = LogManager.getLogger(ContextManagerService.class);
 
+  @Autowired
+  private BrokerPropertiesService propertiesService;
+
   BrokerContext master;
 
   // current cash balance
@@ -46,6 +51,7 @@ implements Initializable
   public void initialize (BrokerContext broker)
   {
     master = broker;
+    propertiesService.configureMe(this);
 // --- no longer needed ---
 //    for (Class<?> clazz: Arrays.asList(BankTransaction.class,
 //                                       CashPosition.class,
