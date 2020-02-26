@@ -437,7 +437,7 @@ implements PortfolioManager, Initializable, Activatable
         // add a RegulationRate
         RegulationRate rr = new RegulationRate();
         rr.withUpRegulationPayment(-rateValue * 1.2)
-            .withDownRegulationPayment(rateValue * 0.4); // magic numbers
+            .withDownRegulationPayment(rateValue * 0.2); // magic numbers
         spec.addRate(rr);
       }
       spec.addRate(rate);
