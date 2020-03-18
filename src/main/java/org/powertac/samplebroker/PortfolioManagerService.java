@@ -104,6 +104,10 @@ implements PortfolioManager, Initializable, Activatable
       Map<CustomerInfo, CustomerRecord>> customerSubscriptions;
   private Map<PowerType, List<TariffSpecification>> competingTariffs;
 
+  // Keep track of a benchmark price to allow for comparisons between
+  // tariff evaluations
+  private double benchmarkPrice = 0.0;
+
   // These customer records need to be notified on activation
   private List<CustomerRecord> notifyOnActivation = new ArrayList<>();
 
@@ -410,16 +414,17 @@ implements PortfolioManager, Initializable, Activatable
     // create a tariff that's better than what's available
     for (PowerType pt : customerProfiles.keySet()) {
       // we'll just do fixed-rate tariffs for now
-      double rateValue = ((marketPrice + fixedPerKwh) * (1.0 + defaultMargin));
+      benchmarkPrice = ((marketPrice + fixedPerKwh) * (1.0 + defaultMargin));
+      double rateValue = benchmarkPrice;
       double periodicValue = defaultPeriodicPayment;
       if (pt.isProduction()) {
         rateValue = -2.0 * marketPrice;
         periodicValue /= 2.0;
       }
-      if (pt.isStorage()) {
-        rateValue *= 0.9; // Magic number
-        periodicValue = 0.0;
-      }
+      //if (pt.isStorage()) {
+      //  rateValue *= 0.9; // Magic number
+      //  periodicValue = 0.0;
+      //}
       if (pt.isInterruptible()) {
         rateValue *= 0.7; // Magic number!! price break for interruptible
       }
@@ -436,8 +441,8 @@ implements PortfolioManager, Initializable, Activatable
       if (pt.isStorage()) {
         // add a RegulationRate
         RegulationRate rr = new RegulationRate();
-        rr.withUpRegulationPayment(-rateValue * 1.2)
-            .withDownRegulationPayment(rateValue * 0.2); // magic numbers
+        rr.withUpRegulationPayment(-rateValue * 1.45)
+            .withDownRegulationPayment(rateValue * 0.5); // magic numbers
         spec.addRate(rr);
       }
       spec.addRate(rate);
@@ -464,18 +469,41 @@ implements PortfolioManager, Initializable, Activatable
         }
       }
       // add a battery storage tariff with overpriced regulation
-      // should get no subscriptions...
+      // should get few subscriptions...
       TariffSpecification spec = 
               new TariffSpecification(brokerContext.getBroker(),
                                       PowerType.BATTERY_STORAGE);
-      Rate rate = new Rate().withValue(-0.2);
+      Rate rate = new Rate().withValue(benchmarkPrice * 0.9);
       spec.addRate(rate);
       RegulationRate rr = new RegulationRate();
-      rr.withUpRegulationPayment(10.0)
-      .withDownRegulationPayment(-10.0); // magic numbers
+      rr.withUpRegulationPayment(10.0)  // huge payment
+      .withDownRegulationPayment(0.00); // free energy
       spec.addRate(rr);
       tariffRepo.addSpecification(spec);
       brokerContext.sendMessage(spec);
+      // add a battery storage tariffs slightly better and slightly worse than the original
+      spec = new TariffSpecification(brokerContext.getBroker(),
+                                     PowerType.BATTERY_STORAGE);
+      rate = new Rate().withValue(benchmarkPrice * 0.7);
+      spec.addRate(rate);
+      rr = new RegulationRate();
+      rr.withUpRegulationPayment(-benchmarkPrice * 0.7 * 1.4)
+          .withDownRegulationPayment(benchmarkPrice * 0.7 * 0.54); // magic numbers
+      spec.addRate(rr);
+      tariffRepo.addSpecification(spec);
+      brokerContext.sendMessage(spec);
+      //
+      spec = new TariffSpecification(brokerContext.getBroker(),
+                                     PowerType.BATTERY_STORAGE);
+      rate = new Rate().withValue(benchmarkPrice * 0.7);
+      spec.addRate(rate);
+      rr = new RegulationRate();
+      rr.withUpRegulationPayment(-benchmarkPrice * 0.7 * 1.5)
+          .withDownRegulationPayment(benchmarkPrice * 0.7 * 0.46); // magic numbers
+      spec.addRate(rr);
+      tariffRepo.addSpecification(spec);
+      brokerContext.sendMessage(spec);
+
     }
     // magic-number hack to supersede a tariff
     if (380 == timeslotIndex) {

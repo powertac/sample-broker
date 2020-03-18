@@ -129,7 +129,7 @@ implements MarketManager, Initializable, Activatable
 
   // ----------------- data access -------------------
   /**
-   * Returns the mean price observed in the market
+   * Returns the mean price observed in the market during the bootstrap session.
    */
   @Override
   public double getMeanMarketPrice ()
