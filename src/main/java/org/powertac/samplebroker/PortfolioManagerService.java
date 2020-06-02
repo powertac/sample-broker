@@ -15,6 +15,7 @@
  */
 package org.powertac.samplebroker;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -24,7 +25,6 @@ import java.util.Map;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
-import org.joda.time.Instant;
 import org.powertac.common.Broker;
 import org.powertac.common.Competition;
 import org.powertac.common.CustomerInfo;
@@ -712,7 +712,7 @@ implements PortfolioManager, Initializable, Activatable
     // timeslots that have passed since the beginning of the simulation.
     int getIndex (Instant when)
     {
-      int result = (int)((when.getMillis() - timeService.getBase()) /
+      int result = (int)((when.toEpochMilli() - timeService.getBase()) /
                          (Competition.currentCompetition().getTimeslotDuration()));
       return result;
     }
