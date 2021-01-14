@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
 
@@ -15,14 +13,14 @@
   <parent>
     <groupId>org.powertac</groupId>
     <artifactId>powertac-parent</artifactId>
-    <version>1.7.0-SNAPSHOT</version>
+    <version>1.7.1</version>
     <relativePath />
   </parent>
 
   <properties>
     <powertac.version>1.7.0-SNAPSHOT</powertac.version>
-    <exec.args></exec.args>
-    <syst.args></syst.args>
+    <exec.args />
+    <syst.args />
   </properties>
 
 <!-- Sonatype OSS repo for resolving snapshot dependencies -->
@@ -40,7 +38,7 @@
     <dependency>
       <groupId>org.powertac</groupId>
       <artifactId>broker-core</artifactId>
-      <version>${powertac.version}</version>
+      <version>1.7.1</version>
     </dependency>
 
 
@@ -192,6 +190,7 @@
     <connection>scm:git:git//github.com/powertac/sample-broker.git</connection>
     <developerConnection>scm:git:git@github.com:powertac/sample-broker.git</developerConnection>
     <url>https://github.com/powertac/sample-broker/</url>
+    <tag>sample-broker-1.7.1</tag>
   </scm>
 
 </project>
