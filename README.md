@@ -23,7 +23,8 @@ where arguments can include:
 * `--jms-url tcp://host.name:61616` overrides the JMS URL for the sim server. In a tournament setting this value is supplied by the tournament infrastructure, but this option can be handy for local testing.
 * `--repeat-count n` instructs the broker to run n sessions, completely reloading its context and restarting after each session completes. Default value is 1.
 * `--repeat-hours h` instructs the broker to attempt to run sessions repeatedly for h hours. This is especially useful in a tournament situation, where the number of games may not be known, but the duration of the tournament can be approximated. If repeat-count is given, this argument will be ignored.
-* `--no-ntp` if given, tells the broker to not rely on system clock synchronization, but rather to estimate the clock offset between server and broker. Note that this will be an approximation, but should at least get the broker into the correct timeslot.
+* `--log-suffix` if given, takes a string argument that is appended to the string "broker" to name log output files.
+* `--no-ntp` if given, tells the broker to not rely on system clock synchronization, but rather to estimate the clock offset between server and broker. Note that this will be an approximation, and may produce errors, but it should at least get the broker into the correct timeslot.
 * `--queue-name name` tells the broker to listen on the named queue for messages from the server. This is really only useful for testing, since the queue name defaults to the broker name, and in a tournament situation is provided by the tournament manager upon successful login.
 * `--server-queue name` tells the broker the name of the JMS input queue for the server. This is also needed only for testing, because the queue name defaults to 'serverInput' and in a tournament situation is provided by the tournament manager upon successful login.
 
@@ -31,8 +32,7 @@ If there are no non-default arguments, and if the broker has already been compil
 
 Note: because of how the exec Maven plugin works, and because the main class is actually in a different module (`broker-core`), it is possible to execute
 without compiling. This will result in running stale class files (previously compiled classes possibly from outdated source code) or, if you've not compiled
-at all yet or recently cleaned the project, a broker that connects to the server but doesn't issue any transactions. So always make sure to tell Maven to do
-both `compile` as well as `exec:exec`!
+at all yet or recently cleaned the project, a broker that connects to the server but doesn't issue any transactions. So if you are not sure the broker has been built, tell Maven to do `clean test` as well as `exec:exec`!
 
 Prepare an executable jar
 ---------------------------
