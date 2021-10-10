@@ -79,6 +79,9 @@
         </executions>
         <configuration>
           <executable>java</executable>
+          <arguments>
+            <argument>--illegal-access=warn</argument>
+          </arguments>
           <commandlineArgs>-server -Xmx512m -classpath %classpath ${syst.args} org.powertac.samplebroker.core.BrokerMain ${exec.args}</commandlineArgs>
         </configuration>
       </plugin>
