@@ -550,9 +550,11 @@ implements PortfolioManager, Initializable, Activatable
       List<TariffSpecification> candidates =
               tariffRepo.findTariffSpecificationsByPowerType(PowerType.INTERRUPTIBLE_CONSUMPTION);
       for (TariffSpecification spec: candidates) {
-        EconomicControlEvent ece =
-                new EconomicControlEvent(spec, 0.2, timeslotIndex + 1);
-        brokerContext.sendMessage(ece);
+        if (spec.getBroker() == brokerContext.getBroker()) {
+          EconomicControlEvent ece =
+                  new EconomicControlEvent(spec, 0.2, timeslotIndex + 1);
+          brokerContext.sendMessage(ece);
+        }
       }
     }
   }
