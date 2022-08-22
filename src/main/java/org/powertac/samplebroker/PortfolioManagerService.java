@@ -507,43 +507,11 @@ implements PortfolioManager, Initializable, Activatable
     }
     // magic-number hack to supersede a tariff
     if (380 == timeslotIndex) {
-      // find the existing CONSUMPTION tariff
-      TariffSpecification oldc = null;
-      List<TariffSpecification> candidates =
-        tariffRepo.findTariffSpecificationsByBroker(brokerContext.getBroker());
-      if (null == candidates || 0 == candidates.size())
-        log.error("No tariffs found for broker");
-      else {
-        // oldc = candidates.get(0);
-        for (TariffSpecification candidate: candidates) {
-          if (candidate.getPowerType() == PowerType.CONSUMPTION) {
-            oldc = candidate;
-            break;
-          }
-        }
-        if (null == oldc) {
-          log.warn("No CONSUMPTION tariffs found");
-        }
-        else {
-          double rateValue = oldc.getRates().get(0).getValue();
-          // create a new CONSUMPTION tariff
-          TariffSpecification spec =
-            new TariffSpecification(brokerContext.getBroker(),
-                                    PowerType.CONSUMPTION)
-                .withPeriodicPayment(defaultPeriodicPayment * 1.1);
-          Rate rate = new Rate().withValue(rateValue);
-          spec.addRate(rate);
-          if (null != oldc)
-            spec.addSupersedes(oldc.getId());
-          //mungId(spec, 6);
-          tariffRepo.addSpecification(spec);
-          brokerContext.sendMessage(spec);
-          // revoke the old one
-          TariffRevoke revoke =
-            new TariffRevoke(brokerContext.getBroker(), oldc);
-          brokerContext.sendMessage(revoke);
-        }
-      }
+      revokeTariff();
+    }
+    // magic-number hack to add a TOU tariff
+    if (400 == timeslotIndex) {
+      addTouTariff();
     }
     // Exercise economic controls every 4 timeslots
     if ((timeslotIndex % 4) == 3) {
@@ -557,6 +525,100 @@ implements PortfolioManager, Initializable, Activatable
         }
       }
     }
+  }
+
+  // revoke and replace a tariff
+  protected void revokeTariff ()
+  {
+    // find the existing CONSUMPTION tariff
+    TariffSpecification oldc = null;
+    List<TariffSpecification> candidates =
+      tariffRepo.findTariffSpecificationsByBroker(brokerContext.getBroker());
+    if (null == candidates || 0 == candidates.size())
+      log.error("No tariffs found for broker");
+    else {
+      // oldc = candidates.get(0);
+      for (TariffSpecification candidate: candidates) {
+        if (candidate.getPowerType() == PowerType.CONSUMPTION) {
+          oldc = candidate;
+          break;
+        }
+      }
+      if (null == oldc) {
+        log.warn("No CONSUMPTION tariffs found");
+      }
+      else {
+        double rateValue = oldc.getRates().get(0).getValue();
+        // create a new CONSUMPTION tariff
+        TariffSpecification spec =
+          new TariffSpecification(brokerContext.getBroker(),
+                                  PowerType.CONSUMPTION)
+              .withPeriodicPayment(defaultPeriodicPayment * 1.1);
+        Rate rate = new Rate().withValue(rateValue);
+        spec.addRate(rate);
+        if (null != oldc)
+          spec.addSupersedes(oldc.getId());
+        //mungId(spec, 6);
+        tariffRepo.addSpecification(spec);
+        brokerContext.sendMessage(spec);
+        // revoke the old one
+        TariffRevoke revoke =
+          new TariffRevoke(brokerContext.getBroker(), oldc);
+        brokerContext.sendMessage(revoke);
+      }
+    }
+  }
+
+  // add a TOU EV tariff
+  protected void addTouTariff ()
+  {
+    TariffSpecification spec = 
+            new TariffSpecification(brokerContext.getBroker(),
+                                    PowerType.ELECTRIC_VEHICLE);
+    // weekday rates
+    Rate rate = new Rate().withValue(benchmarkPrice * 0.4)
+            .withWeeklyBegin(1)
+            .withWeeklyEnd(5)
+            .withDailyBegin(0)
+            .withDailyEnd(5);
+    spec.addRate(rate);
+    rate = new Rate().withValue(benchmarkPrice * 0.8)
+            .withWeeklyBegin(1)
+            .withWeeklyEnd(6)
+            .withDailyBegin(6)
+            .withDailyEnd(16);
+    spec.addRate(rate);
+    rate = new Rate().withValue(benchmarkPrice * 1.2)
+            .withWeeklyBegin(1)
+            .withWeeklyEnd(6)
+            .withDailyBegin(17)
+            .withDailyEnd(21);
+    spec.addRate(rate);
+    rate = new Rate().withValue(benchmarkPrice * 0.8)
+            .withWeeklyBegin(1)
+            .withWeeklyEnd(6)
+            .withDailyBegin(22)
+            .withDailyEnd(23);
+    spec.addRate(rate);
+    // weekend rates
+    rate = new Rate().withValue(benchmarkPrice * 0.2)
+            .withWeeklyBegin(6)
+            .withWeeklyEnd(7)
+            .withDailyBegin(0)
+            .withDailyEnd(6);
+    spec.addRate(rate);
+    rate = new Rate().withValue(benchmarkPrice * 0.5)
+            .withWeeklyBegin(6)
+            .withWeeklyEnd(7)
+            .withDailyBegin(7)
+            .withDailyEnd(23);
+    spec.addRate(rate);
+    RegulationRate rr = new RegulationRate();
+    rr.withUpRegulationPayment(1.0)  // large payment
+    .withDownRegulationPayment(0.00); // free energy
+    spec.addRate(rr);
+    tariffRepo.addSpecification(spec);
+    brokerContext.sendMessage(spec);
   }
 
   // ------------- test-support methods ----------------
