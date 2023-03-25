@@ -5,6 +5,7 @@
 target/
 log/
 .settings/
+**/.attach_*
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
