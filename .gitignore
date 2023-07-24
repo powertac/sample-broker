@@ -20,3 +20,7 @@ hs_err_pid*
 /target/
 /log/
 *~
+
+# Intellij
+.idea
+*.iml
