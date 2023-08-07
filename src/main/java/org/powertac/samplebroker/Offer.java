@@ -15,6 +15,8 @@
  */
 package org.powertac.samplebroker;
 
+//import org.powertac.common.Broker;
+import org.powertac.common.Rate;
 import org.powertac.common.TariffSpecification;
 import org.powertac.common.XMLMessageConverter;
 import org.powertac.common.config.ConfigurableValue;
@@ -23,10 +25,11 @@ import org.powertac.common.config.ConfigurableValue;
  * Instance of this class represent tariffs to be offered by the broker at specified
  * times. These 
  */
-public class Offer
+public class Offer implements Comparable<Offer>
 {
   private String name;
-  private int timeslot = 361;
+  //private Broker myBroker;
+  private int timeslot = 0;
   private TariffSpecification ts = null;
   XMLMessageConverter converter;
 
@@ -57,8 +60,9 @@ public class Offer
     this.withTariffSpecification(xmlspec);
   }
 
-  // not sure why anyone would call this method...
-  public String getName ()
+  // not sure why anyone would call this method -- the name property is needed
+  // by the configureInstances() method.
+  String getName ()
   {
     return name;
   }
@@ -89,7 +93,9 @@ public class Offer
   }
 
   /**
-   * Converts xml string to spec instance
+   * Converts xml string to spec instance.
+   * Note that the conversion does not use the standard constructor, and therefore
+   * fails to initialize object ID values. Therefore they must be set here.
    */
   // fluent setter
   @ConfigurableValue (valueType = "String",
@@ -97,5 +103,16 @@ public class Offer
   public void withTariffSpecification (String xmlSpec)
   {
     ts = (TariffSpecification) converter.fromXML(xmlSpec);
+    for (Rate rate : ts.getRates()) {
+      rate.setTariffId(ts.getId());
+      rate.getId();
+    }
+  }
+
+  // make these things comparable
+  @Override
+  public int compareTo (Offer other)
+  {
+    return getTimeslot() - other.getTimeslot();
   }
 }

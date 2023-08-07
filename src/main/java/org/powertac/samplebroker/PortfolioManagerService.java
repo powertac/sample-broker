@@ -17,10 +17,12 @@ package org.powertac.samplebroker;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
@@ -30,12 +32,11 @@ import org.powertac.common.Competition;
 import org.powertac.common.CustomerInfo;
 import org.powertac.common.Rate;
 import org.powertac.common.RegulationRate;
-import org.powertac.common.RegulationRate.ResponseTime;
-import org.powertac.common.Tariff;
 import org.powertac.common.TariffSpecification;
 import org.powertac.common.TariffTransaction;
 import org.powertac.common.TimeService;
 import org.powertac.common.config.ConfigurableValue;
+//import org.powertac.common.config.Configurator;
 import org.powertac.common.enumerations.PowerType;
 import org.powertac.common.msg.BalancingControlEvent;
 import org.powertac.common.msg.BalancingOrder;
@@ -104,6 +105,12 @@ implements PortfolioManager, Initializable, Activatable
       Map<CustomerInfo, CustomerRecord>> customerSubscriptions;
   private Map<PowerType, List<TariffSpecification>> competingTariffs;
 
+  // If we are using the hard-coded, somewhat adaptive tariffs, then configurableTariffs
+  // should be false
+  @ConfigurableValue(valueType = "Boolean",
+          description = "if true then tariff offerings are configured")
+  private boolean configurableTariffs = false;
+
   // Keep track of a benchmark price to allow for comparisons between
   // tariff evaluations
   private double benchmarkPrice = 0.0;
@@ -125,6 +132,9 @@ implements PortfolioManager, Initializable, Activatable
   @ConfigurableValue(valueType = "Double",
           description = "Default daily meter charge")
   private double defaultPeriodicPayment = -1.0;
+  
+  // Here's the list of tariffs to offer
+  private PriorityQueue<Offer> offerList;
 
   /**
    * Default constructor.
@@ -141,11 +151,26 @@ implements PortfolioManager, Initializable, Activatable
   public void initialize (BrokerContext context)
   {
     this.brokerContext = context;
-    propertiesService.configureMe(this);
+    offerList = new PriorityQueue<Offer>();
     customerProfiles = new LinkedHashMap<>();
     customerSubscriptions = new LinkedHashMap<>();
     competingTariffs = new HashMap<>();
     notifyOnActivation.clear();
+    propertiesService.configureMe(this);
+
+    // pull in tariff specifications from configuration
+    if (configurableTariffs) {
+      Collection<?> offerColl = propertiesService.configureInstances(Offer.class);
+      System.out.println("found " + offerColl.size() + " offers");
+      if (null != offerColl) {
+        for (Object offerObj: offerColl) {
+          Offer offer = (Offer) offerObj;
+          //offer.setBroker(context.getBroker());
+          System.out.println("Adding " + offer.getName());
+          offerList.add(offer);
+        }
+      }
+    }
   }
   
   // -------------- data access ------------------
@@ -392,13 +417,27 @@ implements PortfolioManager, Initializable, Activatable
   @Override // from Activatable
   public synchronized void activate (int timeslotIndex)
   {
-    if (customerSubscriptions.size() == 0) {
-      // we (most likely) have no tariffs
-      createInitialTariffs();
+    Broker me = brokerContext.getBroker();
+    if (configurableTariffs) {
+      // make offers due in this timeslot
+      while (!offerList.isEmpty() && timeslotIndex >= offerList.peek().getTimeslot()) {
+        Offer offer = offerList.poll();
+        System.out.println("offering " + offer.getName());
+        TariffSpecification spec = offer.getTariffSpecification();
+        tariffRepo.addSpecification(spec);
+        brokerContext.sendMessage(spec);
+      }
     }
     else {
-      // we have some, are they good enough?
-      improveTariffs();
+      int tariffCount = tariffRepo.findTariffSpecificationsByBroker(me).size();
+      if (0 == tariffCount) {
+        // we have no tariffs yet
+        createInitialTariffs();
+      }
+      else {
+        // we have some, are they good enough?
+        improveTariffs();
+      }
     }
     for (CustomerRecord record: notifyOnActivation)
       record.activate();
@@ -459,7 +498,7 @@ implements PortfolioManager, Initializable, Activatable
     int timeslotIndex = timeslotRepo.currentTimeslot().getSerialNumber();
     if (371 == timeslotIndex) {
       for (TariffSpecification spec :
-           tariffRepo.findTariffSpecificationsByBroker(brokerContext.getBroker())) {
+        tariffRepo.findTariffSpecificationsByBroker(brokerContext.getBroker())) {
         if (PowerType.INTERRUPTIBLE_CONSUMPTION == spec.getPowerType()) {
           BalancingOrder order = new BalancingOrder(brokerContext.getBroker(),
                                                     spec, 
@@ -488,7 +527,7 @@ implements PortfolioManager, Initializable, Activatable
       spec.addRate(rate);
       rr = new RegulationRate();
       rr.withUpRegulationPayment(-benchmarkPrice * 0.7 * 1.4)
-          .withDownRegulationPayment(benchmarkPrice * 0.7 * 0.54); // magic numbers
+      .withDownRegulationPayment(benchmarkPrice * 0.7 * 0.54); // magic numbers
       spec.addRate(rr);
       tariffRepo.addSpecification(spec);
       brokerContext.sendMessage(spec);
@@ -499,7 +538,7 @@ implements PortfolioManager, Initializable, Activatable
       spec.addRate(rate);
       rr = new RegulationRate();
       rr.withUpRegulationPayment(-benchmarkPrice * 0.7 * 1.5)
-          .withDownRegulationPayment(benchmarkPrice * 0.7 * 0.46); // magic numbers
+      .withDownRegulationPayment(benchmarkPrice * 0.7 * 0.46); // magic numbers
       spec.addRate(rr);
       tariffRepo.addSpecification(spec);
       brokerContext.sendMessage(spec);

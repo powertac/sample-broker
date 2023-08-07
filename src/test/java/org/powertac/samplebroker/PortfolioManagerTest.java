@@ -36,9 +36,6 @@ import org.powertac.samplebroker.core.BrokerPropertiesService;
 import org.powertac.samplebroker.core.PowerTacBroker;
 import org.springframework.test.util.ReflectionTestUtils;
 
-/**
- * @author jcollins
- */
 public class PortfolioManagerTest
 {
   private TimeslotRepo timeslotRepo;
