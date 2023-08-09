@@ -165,8 +165,7 @@ implements PortfolioManager, Initializable, Activatable
       if (null != offerColl) {
         for (Object offerObj: offerColl) {
           Offer offer = (Offer) offerObj;
-          //offer.setBroker(context.getBroker());
-          System.out.println("Adding " + offer.getName());
+          //System.out.println("Adding " + offer.getName());
           offerList.add(offer);
         }
       }
@@ -422,7 +421,7 @@ implements PortfolioManager, Initializable, Activatable
       // make offers due in this timeslot
       while (!offerList.isEmpty() && timeslotIndex >= offerList.peek().getTimeslot()) {
         Offer offer = offerList.poll();
-        System.out.println("offering " + offer.getName());
+        //System.out.println("offering " + offer.getName());
         TariffSpecification spec = offer.getTariffSpecification();
         tariffRepo.addSpecification(spec);
         brokerContext.sendMessage(spec);
