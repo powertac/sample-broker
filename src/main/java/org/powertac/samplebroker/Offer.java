@@ -30,7 +30,7 @@ public class Offer implements Comparable<Offer>
   private String name;
   //private Broker myBroker;
   private int timeslot = 0;
-  private TariffSpecification ts = null;
+  private TariffSpecification tariffSpecification = null;
   XMLMessageConverter converter;
 
   public Offer ()
@@ -50,7 +50,7 @@ public class Offer implements Comparable<Offer>
   {
     this(name);
     this.timeslot = timeslot;
-    this.ts = spec;
+    this.tariffSpecification = spec;
   }
 
   public Offer (String name, int timeslot, String xmlspec)
@@ -83,12 +83,12 @@ public class Offer implements Comparable<Offer>
 
   public TariffSpecification getTariffSpecification ()
   {
-    return ts;
+    return tariffSpecification;
   }
 
   public Offer withTariffSpecification (TariffSpecification spec)
   {
-    ts = spec;
+    tariffSpecification = spec;
     return this;
   }
 
@@ -102,9 +102,9 @@ public class Offer implements Comparable<Offer>
           description = "XML string representing a TariffSpecification")
   public void withTariffSpecification (String xmlSpec)
   {
-    ts = (TariffSpecification) converter.fromXML(xmlSpec);
-    for (Rate rate : ts.getRates()) {
-      rate.setTariffId(ts.getId());
+    tariffSpecification = (TariffSpecification) converter.fromXML(xmlSpec);
+    for (Rate rate : tariffSpecification.getRates()) {
+      rate.setTariffId(tariffSpecification.getId());
       rate.getId();
     }
   }

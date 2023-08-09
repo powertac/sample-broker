@@ -151,12 +151,12 @@ implements PortfolioManager, Initializable, Activatable
   public void initialize (BrokerContext context)
   {
     this.brokerContext = context;
+    propertiesService.configureMe(this);
     offerList = new PriorityQueue<Offer>();
     customerProfiles = new LinkedHashMap<>();
     customerSubscriptions = new LinkedHashMap<>();
     competingTariffs = new HashMap<>();
     notifyOnActivation.clear();
-    propertiesService.configureMe(this);
 
     // pull in tariff specifications from configuration
     if (configurableTariffs) {
