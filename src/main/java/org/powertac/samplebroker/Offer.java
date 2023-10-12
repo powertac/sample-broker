@@ -17,6 +17,7 @@ package org.powertac.samplebroker;
 
 //import org.powertac.common.Broker;
 import org.powertac.common.Rate;
+import org.powertac.common.RateCore;
 import org.powertac.common.TariffSpecification;
 import org.powertac.common.XMLMessageConverter;
 import org.powertac.common.config.ConfigurableValue;
@@ -86,6 +87,8 @@ public class Offer implements Comparable<Offer>
     return tariffSpecification;
   }
 
+  @ConfigurableValue (valueType = "TariffSpecification",
+          description = "tariff spec for this offer")
   public Offer withTariffSpecification (TariffSpecification spec)
   {
     tariffSpecification = spec;
@@ -95,17 +98,26 @@ public class Offer implements Comparable<Offer>
   /**
    * Converts xml string to spec instance.
    * Note that the conversion does not use the standard constructor, and therefore
-   * fails to initialize object ID values. Therefore they must be set here.
+   * fails to initialize object ID values. Therefore they must be set here by calling
+   * their getId() methods.
    */
   // fluent setter
   @ConfigurableValue (valueType = "String",
           description = "XML string representing a TariffSpecification")
   public void withTariffSpecification (String xmlSpec)
   {
+    System.out.println("tariff spec " + xmlSpec);
     tariffSpecification = (TariffSpecification) converter.fromXML(xmlSpec);
-    for (Rate rate : tariffSpecification.getRates()) {
+    long id;
+    for (RateCore rate : tariffSpecification.getRates()) {
+      id = rate.getId();
+      System.out.println("Rate " + id);
       rate.setTariffId(tariffSpecification.getId());
-      rate.getId();
+    }
+    for (RateCore rate : tariffSpecification.getRegulationRates()) {
+      id = rate.getId();
+      System.out.println("RegRate " + id);
+      rate.setTariffId(tariffSpecification.getId());
     }
   }
 

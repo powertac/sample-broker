@@ -19,7 +19,11 @@ This is a maven project. You can run the broker from the command line using mave
 
 where arguments can include:
 
-* `--config config-file.properties` specifies an optional properties file that can set username, password, server URL, and other broker properties. If not given, the file broker.properties in the current working directory will be used. 
+* `--config config-file.properties` specifies an optional properties file that can set username, password, server URL, and other broker properties.
+Configuration in this config file will override individual properties that appear in the file broker.properties
+in the current working directory.
+Note that the config file cannot be in the top-level directory or in the config directory because those are
+automatically searched by configuration.
 * `--jms-url tcp://host.name:61616` overrides the JMS URL for the sim server. In a tournament setting this value is supplied by the tournament infrastructure, but this option can be handy for local testing.
 * `--repeat-count n` instructs the broker to run n sessions, completely reloading its context and restarting after each session completes. Default value is 1.
 * `--repeat-hours h` instructs the broker to attempt to run sessions repeatedly for h hours. This is especially useful in a tournament situation, where the number of games may not be known, but the duration of the tournament can be approximated. If repeat-count is given, this argument will be ignored.

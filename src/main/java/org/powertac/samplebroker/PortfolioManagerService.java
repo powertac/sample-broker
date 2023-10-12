@@ -161,7 +161,7 @@ implements PortfolioManager, Initializable, Activatable
     // pull in tariff specifications from configuration
     if (configurableTariffs) {
       Collection<?> offerColl = propertiesService.configureInstances(Offer.class);
-      System.out.println("found " + offerColl.size() + " offers");
+      //System.out.println("found " + offerColl.size() + " offers");
       if (null != offerColl) {
         for (Object offerObj: offerColl) {
           Offer offer = (Offer) offerObj;
@@ -421,7 +421,7 @@ implements PortfolioManager, Initializable, Activatable
       // make offers due in this timeslot
       while (!offerList.isEmpty() && timeslotIndex >= offerList.peek().getTimeslot()) {
         Offer offer = offerList.poll();
-        //System.out.println("offering " + offer.getName());
+        //System.out.println("offering " + offer.getName() + " ts " + timeslotIndex);
         TariffSpecification spec = offer.getTariffSpecification();
         tariffRepo.addSpecification(spec);
         brokerContext.sendMessage(spec);
@@ -493,6 +493,7 @@ implements PortfolioManager, Initializable, Activatable
   // Checks to see whether our tariffs need fine-tuning
   private void improveTariffs()
   {
+    System.out.println("improveTariffs");
     // quick magic-number hack to inject a balancing order
     int timeslotIndex = timeslotRepo.currentTimeslot().getSerialNumber();
     if (371 == timeslotIndex) {
