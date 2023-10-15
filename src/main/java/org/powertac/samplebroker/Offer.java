@@ -15,12 +15,15 @@
  */
 package org.powertac.samplebroker;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 //import org.powertac.common.Broker;
-import org.powertac.common.Rate;
+//import org.powertac.common.Rate;
 import org.powertac.common.RateCore;
 import org.powertac.common.TariffSpecification;
 import org.powertac.common.XMLMessageConverter;
 import org.powertac.common.config.ConfigurableValue;
+//import org.powertac.common.config.Configurator;
 
 /**
  * Instance of this class represent tariffs to be offered by the broker at specified
@@ -28,9 +31,12 @@ import org.powertac.common.config.ConfigurableValue;
  */
 public class Offer implements Comparable<Offer>
 {
+  static private Logger log = LogManager.getLogger(Offer.class);
+
   private String name;
   //private Broker myBroker;
   private int timeslot = 0;
+  private String xml;
   private TariffSpecification tariffSpecification = null;
   XMLMessageConverter converter;
 
@@ -45,6 +51,7 @@ public class Offer implements Comparable<Offer>
   {
     this();
     this.name = name;
+    log.debug("Created Offer {}", name);
   }
 
   public Offer (String name, int timeslot, TariffSpecification spec)
@@ -58,7 +65,7 @@ public class Offer implements Comparable<Offer>
   {
     this(name);
     this.timeslot = timeslot;
-    this.withTariffSpecification(xmlspec);
+    this.withTariffSpecXML(xmlspec);
   }
 
   // not sure why anyone would call this method -- the name property is needed
@@ -82,13 +89,38 @@ public class Offer implements Comparable<Offer>
     return this;
   }
 
+  /**
+   * We must ensure that the object ID values are set.
+   * @return
+   */
   public TariffSpecification getTariffSpecification ()
   {
+    if (null == tariffSpecification) {
+      if (null == xml) {
+        log.error("Null xml string, ts {}", timeslot);
+        return null;
+      }
+      // This where we turn the xml into a tariff spec
+      tariffSpecification = (TariffSpecification) converter.fromXML(xml);
+      // Now we need to set the ID values
+      long id;
+      for (RateCore rate : tariffSpecification.getRates()) {
+        id = rate.getId();
+        rate.setTariffId(tariffSpecification.getId());
+        log.info("TariffSpecification {}, Rate {}",
+                 tariffSpecification.getId(), id);
+      }
+      for (RateCore rate : tariffSpecification.getRegulationRates()) {
+        id = rate.getId();
+        log.info("RegulationRate {}", id);
+        rate.setTariffId(tariffSpecification.getId());
+      }
+    }
     return tariffSpecification;
   }
 
-  @ConfigurableValue (valueType = "TariffSpecification",
-          description = "tariff spec for this offer")
+  //@ConfigurableValue (valueType = "TariffSpecification",
+  //        description = "tariff spec for this offer")
   public Offer withTariffSpecification (TariffSpecification spec)
   {
     tariffSpecification = spec;
@@ -96,29 +128,26 @@ public class Offer implements Comparable<Offer>
   }
 
   /**
+   * Dummy getter for the XML setter
+   */
+  public String getTariffSpecXML ()
+  {
+    return xml;
+  }
+
+  /**
    * Converts xml string to spec instance.
    * Note that the conversion does not use the standard constructor, and therefore
-   * fails to initialize object ID values. Therefore they must be set here by calling
-   * their getId() methods.
+   * fails to initialize object ID values.
    */
   // fluent setter
   @ConfigurableValue (valueType = "String",
           description = "XML string representing a TariffSpecification")
-  public void withTariffSpecification (String xmlSpec)
+  public void withTariffSpecXML (String xmlSpec)
   {
-    System.out.println("tariff spec " + xmlSpec);
-    tariffSpecification = (TariffSpecification) converter.fromXML(xmlSpec);
-    long id;
-    for (RateCore rate : tariffSpecification.getRates()) {
-      id = rate.getId();
-      System.out.println("Rate " + id);
-      rate.setTariffId(tariffSpecification.getId());
-    }
-    for (RateCore rate : tariffSpecification.getRegulationRates()) {
-      id = rate.getId();
-      System.out.println("RegRate " + id);
-      rate.setTariffId(tariffSpecification.getId());
-    }
+    xml = xmlSpec;
+    //System.out.println("tariff spec " + xmlSpec);
+    log.debug("withTariffSpecXML({})", xmlSpec);
   }
 
   // make these things comparable

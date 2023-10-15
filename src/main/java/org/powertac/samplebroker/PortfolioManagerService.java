@@ -110,6 +110,7 @@ implements PortfolioManager, Initializable, Activatable
   @ConfigurableValue(valueType = "Boolean",
           description = "if true then tariff offerings are configured")
   private boolean configurableTariffs = false;
+  //private boolean tariffConfigComplete = false;
 
   // Keep track of a benchmark price to allow for comparisons between
   // tariff evaluations
@@ -156,21 +157,40 @@ implements PortfolioManager, Initializable, Activatable
     customerProfiles = new LinkedHashMap<>();
     customerSubscriptions = new LinkedHashMap<>();
     competingTariffs = new HashMap<>();
-    notifyOnActivation.clear();
-
-    // pull in tariff specifications from configuration
-    if (configurableTariffs) {
-      Collection<?> offerColl = propertiesService.configureInstances(Offer.class);
-      //System.out.println("found " + offerColl.size() + " offers");
-      if (null != offerColl) {
-        for (Object offerObj: offerColl) {
-          Offer offer = (Offer) offerObj;
-          //System.out.println("Adding " + offer.getName());
-          offerList.add(offer);
-        }
+    
+    log.info("Configuring tariffs");
+    Collection<?> offerColl = propertiesService.configureInstances(Offer.class);
+    log.info("found {} offers", offerColl.size());
+    if (null != offerColl) {
+      for (Object offerObj: offerColl) {
+        Offer offer = (Offer) offerObj;
+        log.info("Adding {}", offer.getName());
+        offerList.add(offer);
       }
     }
+
+    notifyOnActivation.clear();
+
   }
+
+  // Configure tariffs if they are configurable
+//  private void configureTariffsOnce ()
+//  {
+//    // pull in tariff specifications from configuration
+//    if (!tariffConfigComplete && configurableTariffs) {
+//      log.info("Configuring tariffs");
+//      Collection<?> offerColl = propertiesService.configureInstances(Offer.class);
+//      log.info("found {} offers", offerColl.size());
+//      if (null != offerColl) {
+//        for (Object offerObj: offerColl) {
+//          Offer offer = (Offer) offerObj;
+//          log.info("Adding {}", offer.getName());
+//          offerList.add(offer);
+//        }
+//      }
+//    }
+//    tariffConfigComplete = true;
+//  }
   
   // -------------- data access ------------------
   
@@ -417,11 +437,13 @@ implements PortfolioManager, Initializable, Activatable
   public synchronized void activate (int timeslotIndex)
   {
     Broker me = brokerContext.getBroker();
+    // configure tariffs if necessary, must be done after BrokerMessageReceiver is set up
+    //configureTariffsOnce();
     if (configurableTariffs) {
       // make offers due in this timeslot
       while (!offerList.isEmpty() && timeslotIndex >= offerList.peek().getTimeslot()) {
         Offer offer = offerList.poll();
-        //System.out.println("offering " + offer.getName() + " ts " + timeslotIndex);
+        log.info("offering {}, ts {}", offer.getName(), timeslotIndex);
         TariffSpecification spec = offer.getTariffSpecification();
         tariffRepo.addSpecification(spec);
         brokerContext.sendMessage(spec);

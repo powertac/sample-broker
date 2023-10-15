@@ -23,7 +23,7 @@
   
   <Loggers>
     
-    <Logger name="Log" level="info" additivity="false">
+    <Logger name="Log" level="debug" additivity="false">
       <AppenderRef ref="LogFile"/>
     </Logger>
     

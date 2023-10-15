@@ -23,6 +23,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.powertac.common.Broker;
+import org.powertac.common.IdGenerator;
 import org.powertac.common.TariffSpecification;
 import org.powertac.common.Rate;
 import org.powertac.common.XMLMessageConverter;
@@ -54,6 +55,8 @@ class OfferTest
   @BeforeEach
   void setUp () throws Exception
   {
+    IdGenerator.recycle();
+    IdGenerator.setPrefix(3);
     uut = new Offer();
 
     // need this to properly initialize the message converter
@@ -88,14 +91,15 @@ class OfferTest
             + "  powerType=\"CONSUMPTION\" periodicPayment=\"-0.95\">"
             + "  <broker>Jack</broker>"
             + "  <rates>"
-            + "    <rate weeklyBegin=\"-1\" weeklyEnd=\"-1\" dailyBegin=\"-1\" dailyEnd=\"-1\" minValue=\"-0.16115737081256215\">"
-            + "    </rate>"
+            + "    <rate weeklyBegin=\"-1\" weeklyEnd=\"-1\" dailyBegin=\"-1\" dailyEnd=\"-1\" minValue=\"-0.16115737081256215\"/>"
             + "  </rates>"
             + "</tariff-spec>");
     assertNotNull(uut3);
     assertEquals(uut3.getTimeslot(), 333);
     //assertEquals("a3", uut3.getName()); // getName is a private method
     TariffSpecification ts = uut3.getTariffSpecification();
+    assertTrue(ts.getId() > 1000);
+    assertTrue(ts.getRates().get(0).getId() > 1000);
     assertNotNull(ts);
   }
 
@@ -145,7 +149,7 @@ class OfferTest
   {
     uut.withTimeslot(65);
     assertEquals(65, uut.getTimeslot());
-    uut.withTariffSpecification("<tariff-spec\n"
+    uut.withTariffSpecXML("<tariff-spec\n"
             + "powerType=\"PRODUCTION\" signupPayment=\"-10.0\" periodicPayment=\"-0.95\">\n"
             + "  <broker>Jack</broker>\n"
             + "  <rates>\n"
