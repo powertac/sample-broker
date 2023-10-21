@@ -97,7 +97,7 @@ public class Offer implements Comparable<Offer>
   {
     if (null == tariffSpecification) {
       if (null == xml) {
-        log.error("Null xml string, ts {}", timeslot);
+        log.error("Offer {} null xml string, ts {}", getName(), timeslot);
         return null;
       }
       // This where we turn the xml into a tariff spec
@@ -107,12 +107,12 @@ public class Offer implements Comparable<Offer>
       for (RateCore rate : tariffSpecification.getRates()) {
         id = rate.getId();
         rate.setTariffId(tariffSpecification.getId());
-        log.info("TariffSpecification {}, Rate {}",
-                 tariffSpecification.getId(), id);
+        log.info("Offer {} TariffSpecification {}, Rate {}",
+                 getName(), tariffSpecification.getId(), id);
       }
       for (RateCore rate : tariffSpecification.getRegulationRates()) {
         id = rate.getId();
-        log.info("RegulationRate {}", id);
+        log.info("Offer {} RegulationRate {}", getName(), id);
         rate.setTariffId(tariffSpecification.getId());
       }
     }
@@ -136,9 +136,8 @@ public class Offer implements Comparable<Offer>
   }
 
   /**
-   * Converts xml string to spec instance.
-   * Note that the conversion does not use the standard constructor, and therefore
-   * fails to initialize object ID values.
+   * Stores xml string. It will be converted to a spec instance as needed, in
+   * getTariffSpecification().
    */
   // fluent setter
   @ConfigurableValue (valueType = "String",
@@ -147,7 +146,7 @@ public class Offer implements Comparable<Offer>
   {
     xml = xmlSpec;
     //System.out.println("tariff spec " + xmlSpec);
-    log.debug("withTariffSpecXML({})", xmlSpec);
+    log.info("offer {} withTariffSpecXML({})", getName(), xmlSpec);
   }
 
   // make these things comparable

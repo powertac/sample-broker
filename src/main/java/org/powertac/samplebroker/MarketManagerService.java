@@ -89,6 +89,10 @@ implements MarketManager, Initializable, Activatable
           description = "Minimum bid/ask quantity in MWh")
   private double minMWh = 0.001; // don't worry about 1 KWh or less
 
+  @ConfigurableValue(valueType = "Double",
+          description = "Target market position bias. 1 is neutral, <1 will under-buy, >1 will over-buy")
+  private double mktPositionBias = 1.0; // Neutral is default
+
   @ConfigurableValue(valueType = "Integer",
           description = "If set, seed the random generator")
   private Integer seedNumber = null;
