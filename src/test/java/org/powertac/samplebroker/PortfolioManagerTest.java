@@ -18,11 +18,12 @@ package org.powertac.samplebroker;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import java.time.Duration;
 import java.util.Arrays;
 
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-import org.joda.time.Instant;
+import java.time.Instant;
+import java.time.ZonedDateTime;
+import java.time.ZoneId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.powertac.common.CustomerInfo;
@@ -69,8 +70,7 @@ public class PortfolioManagerTest
     portfolioManagerService.initialize(broker);
 
     // set the time
-    baseTime =
-        new DateTime(2011, 2, 1, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+    baseTime = ZonedDateTime.of(2011, 2, 1, 0, 0, 0, 0, ZoneId.of("UTC")).toInstant();
   }
   
   /**
@@ -85,7 +85,7 @@ public class PortfolioManagerTest
     CustomerInfo midvale = new CustomerInfo("Midvale", 1000); 
     customerRepo.add(midvale);
     // create a Timeslot for use by the bootstrap data
-    Timeslot ts0 = new Timeslot(8*24, baseTime.plus(TimeService.DAY * 8));
+    Timeslot ts0 = new Timeslot(8*24, baseTime.plus(Duration.ofDays(8)));
     when(timeslotRepo.currentTimeslot()).thenReturn(ts0);
     // send to broker and check
     double[] podunkData = new double[7*24];

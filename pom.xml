@@ -15,14 +15,12 @@
   <parent>
     <groupId>org.powertac</groupId>
     <artifactId>powertac-parent</artifactId>
-    <version>1.9.1-SNAPSHOT</version>
+    <version>1.10.0-SNAPSHOT</version>
     <relativePath />
   </parent>
 
   <properties>
-    <powertac.version>1.9.1-SNAPSHOT</powertac.version>
-    <exec.args></exec.args>
-    <syst.args></syst.args>
+    <powertac.version>1.10.0-SNAPSHOT</powertac.version>
   </properties>
 
 <!-- Sonatype OSS repo for resolving snapshot dependencies -->
@@ -80,7 +78,6 @@
         <configuration>
           <executable>java</executable>
           <arguments>
-            <argument>--illegal-access=warn</argument>
           </arguments>
           <commandlineArgs>-server -Xmx512m -classpath %classpath ${syst.args} org.powertac.samplebroker.core.BrokerMain ${exec.args}</commandlineArgs>
         </configuration>
